@@ -2,25 +2,63 @@
 
 Site institucional e blog de cursos e eventos, com painel administrativo. Next.js 16, React, TypeScript e Tailwind CSS v4. Fonte Inter hospedada junto ao projeto.
 
-## Executar
+## Vercel + Supabase
 
-Requer Node.js 24 LTS (SQLite nativo).
+O projeto usa **Supabase Postgres** para eventos e sessões, e **Supabase Storage** para capas. Não depende de disco local e é compatível com as funções da Vercel. Requer Node.js 24.x.
+
+### 1. Preparar o banco
+
+No projeto `xqytfpihewumqtovnqyb`, abra o SQL Editor e execute todo o conteúdo de `supabase/migrations/20261001210502_grupo_e_supabase.sql`. A migração cria tabelas com prefixo `grupo_e_`, regras RLS, um bucket privado `grupo-e-eventos` e os cinco cursos históricos. Ela não apaga tabelas de outros sistemas e pode ser repetida sem sobrescrever os conteúdos importados ou editados.
+
+Com Supabase CLI autenticado, a alternativa é `supabase link --project-ref xqytfpihewumqtovnqyb` seguido de `supabase db push`. Não use as duas alternativas no mesmo fluxo sem reconciliar o histórico de migração.
+
+### 2. Configurar a Vercel
+
+Em **Settings → Environment Variables**, adicione para **Production** e **Preview**:
+
+| Variável              | Valor                                                  |
+| --------------------- | ------------------------------------------------------ |
+| `SUPABASE_URL`        | `https://xqytfpihewumqtovnqyb.supabase.co`             |
+| `SUPABASE_SECRET_KEY` | Chave secreta obtida em Supabase → Settings → API Keys |
+| `ADMIN_EMAIL`         | E-mail escolhido para o administrador do site          |
+| `ADMIN_PASSWORD_HASH` | Hash gerado com `npm run admin:setup`                  |
+
+A chave secreta começa com `sb_secret_`. O projeto aceita `SUPABASE_SERVICE_ROLE_KEY` para a chave `service_role` legada, se necessário. **A chave publishable/anon não substitui a chave secreta nesta implementação.** Nunca acrescente `NEXT_PUBLIC_` ao nome da chave secreta e nunca a envie em chat, GitHub ou código frontend. A chave não é a senha do banco.
+
+O login do site usa suas próprias credenciais de administrador, distintas da conta usada para entrar no painel Supabase. Não há cadastro público nem senha padrão. Gere o hash localmente, com entrada oculta e senha de pelo menos 12 caracteres; guarde as credenciais no seu gerenciador de senhas.
+
+Em **Settings → Build and Deployment**: Next.js, raiz do repositório, `npm ci`, `npm run build`, saída padrão e Node.js 24.x. Faça **Redeploy** após salvar as variáveis. `DATA_DIR` deixou de ser utilizada e pode ser removida.
+
+Sem URL/chave configuradas, as páginas públicas exibem os cursos históricos do projeto e o login fica indisponível. Isso permite conferir o institucional durante a configuração. Com o banco configurado, erros de conexão não são mascarados por esse conteúdo e devem ser corrigidos.
+
+### 3. Verificar o banco
+
+Depois da migração, execute no SQL Editor:
+
+```sql
+select count(*) from public.grupo_e_events;
+select id, public, file_size_limit from storage.buckets where id = 'grupo-e-eventos';
+```
+
+São esperados cinco conteúdos iniciais e bucket privado com limite de 3 MB. Entre em `/admin`, crie um rascunho com capa, publique e confirme a página no blog. Conteúdos e sessões persistem em novos deploys; não ficam em `/tmp`.
+
+## Executar localmente
 
 ```sh
 npm ci
 cp .env.example .env.local
 npm run admin:setup
-# Copie ADMIN_EMAIL e ADMIN_PASSWORD_HASH gerados para .env.local.
+# Preencha a URL/chave e copie ADMIN_EMAIL/ADMIN_PASSWORD_HASH para .env.local.
 npm run dev
 ```
 
-Abra `/` para o institucional, `/cursos-e-eventos` para o blog e `/admin` para administrar. O login fica indisponível até as credenciais serem configuradas. Não há senha padrão. O comando de configuração lê a senha com entrada oculta; use pelo menos 12 caracteres.
+Abra `/` para o institucional, `/cursos-e-eventos` para o blog e `/admin` para administrar. Nunca envie `.env.local` ao repositório.
 
 ## Cadastrar um encontro
 
 1. Acesse `/admin` e faça login.
 2. Clique em **Novo conteúdo**.
-3. Informe título, resumo e texto; envie uma capa JPG, PNG ou WebP de até 5 MB.
+3. Informe título, resumo e texto; envie uma capa JPG, PNG ou WebP de até 3 MB.
 4. Escolha categoria e visibilidade. Um rascunho fica acessível somente no painel.
 5. Para cursos/eventos novos, informe data e horário de Brasília, local, instrutor e link HTTPS de inscrição (opcional). Sem link, o atendimento segue para o WhatsApp.
 6. Salve. A publicação aparece no blog e tem sua própria página. O painel permite editar e excluir com confirmação.
@@ -29,20 +67,25 @@ Marque **Conteúdo de arquivo** para encontros antigos sem data de realização 
 
 ## Segurança e persistência
 
-Credenciais configuradas no servidor; senha armazenada como hash scrypt. Sessões aleatórias armazenadas como hash no banco, cookie HttpOnly/SameSite e Secure em produção, duração de oito horas e revogação no logout. Ações de alteração validam a autenticação no servidor. Next.js verifica a origem nas Server Actions. Login limitado a dez tentativas por janela de quinze minutos, persistido no SQLite. O limite é compartilhado para a conta única de administrador.
+A chave Supabase é usada exclusivamente no servidor, em módulo `server-only`. O site filtra o acesso público para conteúdos publicados. RLS permite leitura de eventos publicados por `anon`/`authenticated` e impede escrita direta. Sessões, tentativas de login e metadados de imagens não têm acesso público. As alterações são autenticadas nas Server Actions antes do uso da chave privilegiada.
 
-O banco SQLite e as imagens enviadas ficam em `DATA_DIR/grupo-e.sqlite`. **A hospedagem precisa de Node.js e disco persistente**, por exemplo um VPS ou contêiner com volume. Esta implementação não pode ser publicada em hospedagem puramente estática ou em funções com disco efêmero. Use uma instância; múltiplas réplicas precisam de banco compartilhado e armazenamento de objetos.
+A senha é armazenada como hash scrypt nas variáveis do servidor. Sessões aleatórias são armazenadas como hash no Postgres, com cookie HttpOnly/SameSite e Secure em produção, expiração de oito horas e revogação no logout. O limite de dez tentativas em quinze minutos é aplicado com uma função SQL de atualização atômica, acessível apenas ao servidor.
 
-Faça backups consistentes do SQLite, incluindo as capas. Exemplo com SQLite CLI: `sqlite3 data/grupo-e.sqlite ".backup '/caminho/backup.sqlite'"`. Não copie apenas o arquivo principal com o aplicativo escrevendo e ignore o WAL. Execute o servidor com acesso restrito ao diretório de dados e use HTTPS. Não envie `.env.local` nem o banco ao GitHub. Rotação de senha: gere outro hash, atualize o ambiente, reinicie o servidor e revogue as sessões existentes no banco.
+O bucket de imagens é privado. A rota `/media/[id]` serve uma capa pública apenas quando associada a um conteúdo publicado; imagens de rascunhos exigem sessão administrativa. As imagens não passam pelo cache de otimização do Next.js e são servidas com `no-store`, para respeitar a mudança de visibilidade. Substituição e exclusão fazem limpeza das capas anteriores. O limite de 3 MB considera o limite de payload das funções Vercel.
 
-## Produção e verificações
+Configure backups do Postgres e do Storage conforme o plano do Supabase. Rotação da senha administrativa: gere outro hash, atualize a variável e revogue as sessões existentes na tabela `grupo_e_sessions`. Use HTTPS.
+
+## Verificações
 
 ```sh
 npm run test
+npm run test:schema
 npm run typecheck
 npm run build
-npm start
+npm run verify
 ```
+
+`test:schema` aplica a migração em um Postgres isolado (PGlite) e verifica RLS, acesso restrito, importação e limite de login. `verify` usa Chromium (`CHROMIUM_PATH`, padrão `/usr/bin/chromium`) e uma API Supabase HTTP isolada para testar login, upload, rascunho, publicação, exclusão e logout. Esses testes **não confirmam** conexão ou políticas no projeto Supabase real. A validação real depende de acesso à conta e às credenciais configuradas na hospedagem.
 
 ## Fontes do conteúdo
 

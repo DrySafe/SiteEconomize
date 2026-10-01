@@ -9,7 +9,7 @@ export default async function Edit({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const entry = getEvents(true).find((e) => e.id === id);
+  const entry = (await getEvents(true)).find((e) => e.id === id);
   if (!entry) notFound();
   return <EventForm entry={entry} />;
 }

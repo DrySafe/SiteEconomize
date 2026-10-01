@@ -1,13 +1,13 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { startFixture } from "../tests/supabase-fixture.mjs";
+
 import { randomBytes, scryptSync } from "node:crypto";
 
 // Credenciais temporárias, exclusivamente para este teste isolado.
-const directory = await mkdtemp(join(tmpdir(), "grupoe-verify-"));
+const fixtureKey = "sb_secret_" + randomBytes(24).toString("hex");
+const fixture = await startFixture(fixtureKey);
 const password = randomBytes(24).toString("hex");
 const salt = randomBytes(16).toString("hex");
 const server = spawn(
@@ -16,7 +16,8 @@ const server = spawn(
   {
     env: {
       ...process.env,
-      DATA_DIR: directory,
+      SUPABASE_URL: fixture.url,
+      SUPABASE_SECRET_KEY: fixtureKey,
       ADMIN_EMAIL: "admin@example.test",
       ADMIN_PASSWORD_HASH: `scrypt:${salt}:${scryptSync(password, salt, 64).toString("hex")}`,
     },
@@ -120,7 +121,7 @@ try {
   await page
     .getByLabel(/^Texto completo/)
     .fill(
-      "Esta oficina existe somente no banco temporário de verificação.\n\nNão será publicada no site entregue ao cliente.",
+      "Esta oficina existe somente na API isolada de verificação.\n\nNão será publicada no site entregue ao cliente.",
     );
   await page
     .getByLabel("Imagem de capa", { exact: false })
@@ -146,6 +147,11 @@ try {
   await page
     .getByRole("link", { name: "Editar Oficina de teste de publicação" })
     .click();
+  const draftImage = await page
+    .locator(".editor-current-image img")
+    .getAttribute("src");
+  const anonymous = await browser.newContext();
+  assert.equal((await anonymous.request.get(base + draftImage)).status(), 404);
   await page.getByLabel("Visibilidade").selectOption("published");
   await page
     .getByLabel("Data e horário", { exact: false })
@@ -181,6 +187,7 @@ try {
     .locator(".article-cover img")
     .getAttribute("src");
   assert.ok(imageSrc.includes("media"));
+  assert.equal((await anonymous.request.get(base + imageSrc)).status(), 200);
   await publicPage.close();
   await row
     .getByRole("button", { name: "Excluir Oficina de teste de publicação" })
@@ -189,17 +196,19 @@ try {
   await row.waitFor({ state: "detached" });
   response = await context.request.get(base + link);
   assert.equal(response.status(), 404);
+  assert.equal((await anonymous.request.get(base + draftImage)).status(), 404);
+  await anonymous.close();
   await page.getByRole("button", { name: "Sair" }).click();
   await page.waitForURL("**/admin/login");
   await page.goto(base + "/admin");
   await page.waitForURL("**/admin/login");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: desktop/mobile, menu, busca, filtros, acesso protegido, login, upload, rascunho privado, edição, publicação, inscrição, exclusão e logout. Nenhum erro de página.",
+    "PASS (API Supabase isolada): desktop/mobile, menu, busca, filtros, acesso protegido, login, upload, rascunho privado, edição, publicação, inscrição, exclusão e logout. Nenhum erro de página.",
   );
 } finally {
   await browser?.close();
   server.kill("SIGTERM");
   await new Promise((r) => server.once("exit", r));
-  await rm(directory, { recursive: true, force: true });
+  await fixture.close();
 }

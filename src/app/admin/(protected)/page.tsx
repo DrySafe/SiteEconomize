@@ -16,7 +16,7 @@ export default async function Dashboard({
   searchParams: Promise<{ saved?: string }>;
 }) {
   await requireAdmin();
-  const entries = getEvents(true);
+  const entries = await getEvents(true);
   const saved = (await searchParams).saved;
   return (
     <>

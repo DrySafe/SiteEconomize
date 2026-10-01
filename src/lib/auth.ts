@@ -2,54 +2,71 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createHash, randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
-import { db } from "./db";
+import { databaseConfigured, supabase } from "./supabase";
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export async function authenticated() {
   const token = (await cookies()).get("grupo-e-session")?.value;
-  if (!token) return false;
-  const row = db()
-    .prepare("SELECT expires FROM sessions WHERE token=?")
-    .get(hash(token)) as { expires: number } | undefined;
-  return !!row && row.expires > Date.now();
+  if (!token || !databaseConfigured()) return false;
+  const { data, error } = await supabase()
+    .from("grupo_e_sessions")
+    .select("expires_at")
+    .eq("token", hash(token))
+    .maybeSingle();
+  if (error)
+    throw new Error("Não foi possível verificar a sessão administrativa.");
+  return !!data && new Date(data.expires_at).getTime() > Date.now();
 }
 export async function requireAdmin() {
   if (!(await authenticated())) redirect("/admin/login");
 }
 export async function createSession() {
   const token = randomBytes(32).toString("hex");
-  db().prepare("DELETE FROM sessions WHERE expires<?").run(Date.now());
-  db()
-    .prepare("INSERT INTO sessions(token,expires) VALUES(?,?)")
-    .run(hash(token), Date.now() + 1000 * 60 * 60 * 8);
+  const cleanup = await supabase()
+    .from("grupo_e_sessions")
+    .delete()
+    .lt("expires_at", new Date().toISOString());
+  if (cleanup.error) throw new Error("Não foi possível preparar a sessão.");
+  const { error } = await supabase()
+    .from("grupo_e_sessions")
+    .insert({
+      token: hash(token),
+      expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    });
+  if (error) throw new Error("Não foi possível criar a sessão administrativa.");
   (await cookies()).set("grupo-e-session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: 8 * 60 * 60,
   });
 }
 export async function destroySession() {
   const jar = await cookies();
   const token = jar.get("grupo-e-session")?.value;
-  if (token)
-    db().prepare("DELETE FROM sessions WHERE token=?").run(hash(token));
+  if (token && databaseConfigured()) {
+    const { error } = await supabase()
+      .from("grupo_e_sessions")
+      .delete()
+      .eq("token", hash(token));
+    if (error)
+      throw new Error("Não foi possível encerrar a sessão. Tente novamente.");
+  }
   jar.delete("grupo-e-session");
 }
-export function allowLogin() {
-  const now = Date.now();
-  const row = db()
-    .prepare("SELECT count,expires FROM attempts WHERE key=?")
-    .get("admin") as { count: number; expires: number } | undefined;
-  if (row && row.expires > now && row.count >= 10) return false;
-  if (!row || row.expires <= now)
-    db()
-      .prepare(
-        "INSERT INTO attempts(key,count,expires) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET count=excluded.count,expires=excluded.expires",
-      )
-      .run("admin", 1, now + 15 * 60 * 1000);
-  else
-    db().prepare("UPDATE attempts SET count=count+1 WHERE key=?").run("admin");
-  return true;
+export async function allowLogin() {
+  const { data, error } = await supabase().rpc("grupo_e_allow_login");
+  if (error)
+    throw new Error(
+      "Não foi possível verificar o acesso. Confira a migração do banco.",
+    );
+  return data === true;
+}
+export async function resetLoginAttempts() {
+  const { error } = await supabase()
+    .from("grupo_e_login_attempts")
+    .delete()
+    .eq("key", "admin");
+  if (error) throw new Error("Não foi possível concluir o login.");
 }

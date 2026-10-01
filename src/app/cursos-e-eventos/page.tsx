@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description:
     "Aprendizado, encontros e inspiração para quem produz. Explore os cursos e eventos do GRUPO E.",
 };
-export default function Blog() {
+export default async function Blog() {
   return (
     <>
       <SiteHeader />
@@ -47,7 +47,7 @@ export default function Blog() {
           </div>
         </section>
         <section id="explorar" className="container section blog-section">
-          <EventBrowser entries={getEvents()} />
+          <EventBrowser entries={await getEvents()} />
         </section>
       </main>
       <SiteFooter />

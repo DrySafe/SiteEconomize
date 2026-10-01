@@ -29,8 +29,8 @@ const icons: Record<string, typeof Package> = {
   leaf: Leaf,
   truck: Truck,
 };
-export default function Home() {
-  const events = getEvents().slice(0, 3);
+export default async function Home() {
+  const events = (await getEvents()).slice(0, 3);
   return (
     <>
       <SiteHeader />

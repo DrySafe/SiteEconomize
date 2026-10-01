@@ -21,7 +21,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const entry = getEvent((await params).slug);
+  const entry = await getEvent((await params).slug);
   return {
     title: entry?.title || "Conteúdo não encontrado",
     description: entry?.excerpt,
@@ -32,10 +32,10 @@ export default async function Detail({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const entry = getEvent((await params).slug);
+  const entry = await getEvent((await params).slug);
   if (!entry) notFound();
   const past = isPast(entry);
-  const related = getEvents()
+  const related = (await getEvents())
     .filter((e) => e.id !== entry.id && e.category === entry.category)
     .slice(0, 3);
   return (
@@ -61,6 +61,7 @@ export default async function Detail({
             <div className="article-cover">
               <Image
                 src={entry.image || "/images/Logo-PNG.png"}
+                unoptimized={entry.image.startsWith("/media/")}
                 alt={`Material de divulgação: ${entry.title}`}
                 fill
                 sizes="(max-width: 900px) 100vw, 65vw"

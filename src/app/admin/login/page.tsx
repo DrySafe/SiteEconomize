@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authenticated } from "@/lib/auth";
+import { databaseConfigured } from "@/lib/supabase";
 import { LoginForm } from "@/components/admin/login-form";
 export const metadata = {
   title: "Acesso administrativo",
@@ -34,7 +35,11 @@ export default async function Login() {
       <div className="login-side">
         <LoginForm
           configured={
-            !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD_HASH)
+            !!(
+              databaseConfigured() &&
+              process.env.ADMIN_EMAIL &&
+              process.env.ADMIN_PASSWORD_HASH
+            )
           }
         />
         <Link href="/" className="text-link">

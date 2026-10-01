@@ -93,7 +93,7 @@ export function EventForm({ entry }: { entry?: EventEntry }) {
               accept="image/png,image/jpeg,image/webp"
             />
             <small>
-              JPG, PNG ou WebP. Máximo 5 MB. A arte completa aparece na página
+              JPG, PNG ou WebP. Máximo 3 MB. A arte completa aparece na página
               do conteúdo.
             </small>
           </label>
@@ -101,6 +101,7 @@ export function EventForm({ entry }: { entry?: EventEntry }) {
             <div className="editor-current-image">
               <Image
                 src={entry.image}
+                unoptimized={entry.image.startsWith("/media/")}
                 alt="Capa atual"
                 width={160}
                 height={160}

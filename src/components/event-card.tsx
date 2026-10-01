@@ -14,6 +14,7 @@ export function EventCard({ entry }: { entry: EventEntry }) {
       >
         <Image
           src={entry.image || "/images/Logo-PNG.png"}
+          unoptimized={entry.image.startsWith("/media/")}
           alt=""
           fill
           sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
