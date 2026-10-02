@@ -10,6 +10,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "admin:setup": "node scripts/create-admin.mjs",
     "verify": "node scripts/verify.mjs",
+    "verify:hero": "node scripts/verify-hero-animation.mjs",
     "format": "prettier --write src scripts tests *.json *.ts *.mjs",
     "test:schema": "node scripts/test-schema.mjs"
   },
