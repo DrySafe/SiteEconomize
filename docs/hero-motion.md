@@ -1,6 +1,6 @@
 # Direção de movimento do hero
 
-O GRUPO E aparece como origem das conexões: sinais percorrem curvas entre a logo e as empresas. A composição usa um painel escuro, partículas em diferentes planos, luz âmbar e cartões claros para reforçar o contraste da identidade visual.
+O GRUPO E aparece como origem das conexões: sinais percorrem curvas entre a logo e as empresas. A composição usa um painel em areia clara, partículas em diferentes planos, conexões em bronze suave e cartões claros para integrar a composição ao fundo branco sem perder a leitura das linhas.
 
 ## Referências pesquisadas
 

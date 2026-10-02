@@ -43,9 +43,9 @@ export function animateHeroConnections(
   glow.height = 32;
   const glowContext = glow.getContext("2d")!;
   const light = glowContext.createRadialGradient(16, 16, 0, 16, 16, 16);
-  light.addColorStop(0, "#ffdda899");
-  light.addColorStop(0.2, "#ffbe6240");
-  light.addColorStop(1, "#ffbe6200");
+  light.addColorStop(0, "#a47c5099");
+  light.addColorStop(0.2, "#a47c5030");
+  light.addColorStop(1, "#a47c5000");
   glowContext.fillStyle = light;
   glowContext.fillRect(0, 0, 32, 32);
   const id = `hero-signal-${Math.random().toString(36).slice(2)}`;
@@ -65,9 +65,9 @@ export function animateHeroConnections(
   gradient.setAttribute("x1", "0%");
   gradient.setAttribute("x2", "100%");
   [
-    ["0%", "#ffc16e"],
-    ["50%", "#ffe2ae"],
-    ["100%", "#fff6e8"],
+    ["0%", "#a37649"],
+    ["50%", "#896b4e"],
+    ["100%", "#705e4d"],
   ].forEach(([offset, color]) => {
     const stop = element("stop", "", gradient);
     stop.setAttribute("offset", offset);
@@ -194,14 +194,14 @@ export function animateHeroConnections(
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 3);
       neighbors.forEach(({ other, distance }) => {
-        ctx.strokeStyle = `rgba(219,181,131,${(1 - distance / 92) * 0.25 * point.depth})`;
+        ctx.strokeStyle = `rgba(134,112,89,${(1 - distance / 92) * 0.25 * point.depth})`;
         ctx.lineWidth = 0.65;
         ctx.beginPath();
         ctx.moveTo(point.x, point.y);
         ctx.lineTo(other.x, other.y);
         ctx.stroke();
       });
-      ctx.fillStyle = `rgba(255,218,159,${0.18 + point.depth * 0.4})`;
+      ctx.fillStyle = `rgba(142,112,77,${0.18 + point.depth * 0.4})`;
       if (point.depth > 0.75)
         ctx.drawImage(glow, point.x - 8, point.y - 8, 16, 16);
       ctx.beginPath();
@@ -308,7 +308,7 @@ export function animateHeroConnections(
       }
       const elapsed = age / 1000;
       const alpha = Math.pow(1 - age / spark.life, 2);
-      ctx.fillStyle = `rgba(255,228,183,${alpha * 0.85})`;
+      ctx.fillStyle = `rgba(147,104,62,${alpha * 0.85})`;
       ctx.globalAlpha = alpha;
       ctx.drawImage(
         glow,

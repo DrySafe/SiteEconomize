@@ -284,11 +284,11 @@ svg {
 .hero-visual {
   background: radial-gradient(
     ellipse at 58% 48%,
-    #3d221d 0%,
-    #251a19 35%,
-    #131313 78%
+    #faf6f0 0%,
+    #f2ebe3 35%,
+    #e9e0d6 78%
   );
-  border: 1px solid #362925;
+  border: 1px solid #e4d9ce;
   border-radius: 24px;
   min-height: 550px;
   position: relative;
@@ -303,7 +303,7 @@ svg {
   background: conic-gradient(
     from 30deg,
     transparent 0 38%,
-    #cf7f291c 44%,
+    #b78c5710 44%,
     transparent 52% 100%
   );
   animation: hero-ambient-orbit 36s linear infinite;
@@ -312,7 +312,7 @@ svg {
 .visual-grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(#e7c7a611 0.7px, transparent 0.7px);
+  background-image: radial-gradient(#92765915 0.7px, transparent 0.7px);
   background-size: 20px 20px;
   mask-image: radial-gradient(ellipse, #000, transparent 75%);
 }
@@ -355,8 +355,8 @@ svg {
   position: absolute;
   width: 82%;
   aspect-ratio: 1;
-  border: 1px solid #e2ad671c;
-  border-right-color: #ffce8552;
+  border: 1px solid #94734f26;
+  border-right-color: #94734f52;
   border-radius: 50%;
   transform: rotateX(58deg) rotate(-20deg);
   z-index: -1;
@@ -365,7 +365,7 @@ svg {
   width: 64%;
   max-width: 310px;
   height: auto;
-  filter: drop-shadow(0 22px 20px #0007) drop-shadow(0 0 28px #f963161a);
+  filter: drop-shadow(0 18px 20px #74543b29) drop-shadow(0 0 28px #f9631610);
 }
 @keyframes hero-logo-drift {
   0%,
@@ -382,7 +382,7 @@ svg {
   }
 }
 .visual-top-label {
-  color: #d3c5b6;
+  color: #776653;
   z-index: 3;
   position: absolute;
   top: 25px;
@@ -411,7 +411,7 @@ svg {
   stroke-linejoin: round;
 }
 .connection-network {
-  filter: drop-shadow(0 0 5px #ffb76640);
+  filter: drop-shadow(0 1px 3px #80604424);
 }
 .connection-active {
   stroke-width: 1;
@@ -419,10 +419,10 @@ svg {
 .connection-particle,
 .connection-core,
 .connection-port {
-  fill: #fff0d3;
+  fill: #765538;
 }
 .connection-core {
-  fill: #ffb761;
+  fill: #a66f3c;
 }
 .hero-tags[data-animated] .visual-tag {
   animation: hero-tag-float 7s ease-in-out infinite;
@@ -443,10 +443,10 @@ svg {
   gap: 7px;
   align-items: center;
   background: linear-gradient(135deg, #fffffff7, #fff8edf0);
-  border: 1px solid #ffffffcc;
+  border: 1px solid #e5d9cacc;
   backdrop-filter: blur(12px);
   box-shadow:
-    0 12px 28px #0003,
+    0 10px 26px #74543b1f,
     inset 0 1px 0 #fff;
   border-radius: 9px;
   padding: 9px 11px;
@@ -459,7 +459,7 @@ svg {
   color: var(--burgundy);
 }
 .visual-bottom {
-  color: #c9bba9;
+  color: #776653;
   z-index: 3;
   position: absolute;
   bottom: 24px;
