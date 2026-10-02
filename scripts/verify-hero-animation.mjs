@@ -90,6 +90,10 @@ async function verify(viewport) {
       meshPaths: new Set(),
       networkShapes: new Set(),
       missingMesh: 0,
+      orphanLines: 0,
+      wrongEndpoints: 0,
+      particleFrames: 0,
+      roundedPaths: 0,
     };
     await new Promise((resolve) => {
       function sample() {
@@ -114,6 +118,47 @@ async function verify(viewport) {
             )
           )
             summary.missingMesh++;
+          const bounds = document
+            .querySelector(".hero-tags")
+            .getBoundingClientRect();
+          const lines = Array.from(
+            document.querySelectorAll(".connection-active"),
+          );
+          if (
+            Array.from(document.querySelectorAll(".connection-particle")).some(
+              (dot) => Number(dot.getAttribute("opacity")) > 0.05,
+            )
+          )
+            summary.particleFrames++;
+          lines.forEach((path) => {
+            if (
+              Number(path.getAttribute("opacity")) <= 0.005 ||
+              !path.getAttribute("d")
+            )
+              return;
+            const from = Number(path.dataset.from),
+              to = Number(path.dataset.to);
+            if (opacity[from] < 0.03 || opacity[to] < 0.03)
+              summary.orphanLines++;
+            const length = path.getTotalLength();
+            const endpoints = [
+              path.getPointAtLength(0),
+              path.getPointAtLength(length),
+            ];
+            [from, to].forEach((label, index) => {
+              const rect = elements[label].getBoundingClientRect();
+              const x = ((rect.left - bounds.left) / bounds.width) * 600;
+              const y =
+                ((rect.top + rect.height / 2 - bounds.top) / bounds.height) *
+                600;
+              if (
+                Math.abs(endpoints[index].x - x) > 1.5 ||
+                Math.abs(endpoints[index].y - y) > 1.5
+              )
+                summary.wrongEndpoints++;
+            });
+            if (path.getAttribute("d").includes("Q")) summary.roundedPaths++;
+          });
           summary.meshPaths.add(mesh[0]?.getAttribute("d"));
           summary.networkShapes.add(
             Array.from(document.querySelectorAll(".connection-active"))
@@ -181,6 +226,24 @@ async function verify(viewport) {
   assert.ok(
     result.networkShapes > 5,
     "Os caminhos pretos precisam se reconectar.",
+  );
+  assert.equal(
+    result.orphanLines,
+    0,
+    "Nenhuma linha deve ficar acesa sem duas caixas visíveis.",
+  );
+  assert.equal(
+    result.wrongEndpoints,
+    0,
+    "As conexões precisam tocar apenas a ponta esquerda.",
+  );
+  assert.ok(
+    result.particleFrames > 10,
+    "Partículas devem acompanhar conexões e desconexões.",
+  );
+  assert.ok(
+    result.roundedPaths > 10,
+    "Os trajetos precisam ter cantos arredondados.",
   );
   assert.equal(errors.length, 0, errors.join("\n"));
   await page.screenshot({ path: `/tmp/grupoe-hero-${viewport.width}.png` });

@@ -351,13 +351,23 @@ svg {
 }
 .connection-mesh {
   stroke: #716d68;
-  stroke-width: 0.8;
-  opacity: 0.16;
+  stroke-width: 0.9;
+  opacity: 0.29;
 }
-.connection-active,
-.connection-lead {
+.connection-network {
+  filter: drop-shadow(0 2px 1.5px #16131035);
+}
+.connection-active {
   stroke: #171717;
-  stroke-width: 1.1;
+  stroke-width: 1.3;
+}
+.connection-dust {
+  filter: drop-shadow(0 1px 1px #16131040);
+}
+.connection-particle {
+  fill: #171717;
+  stroke: #ffffffb3;
+  stroke-width: 0.5;
 }
 .hero-tags[data-animated] .visual-tag {
   animation: hero-tag-float 7s ease-in-out infinite;
@@ -379,7 +389,9 @@ svg {
   align-items: center;
   background: #fff;
   border: 1px solid #f5f0e9;
-  box-shadow: 0 10px 30px #37221709;
+  box-shadow:
+    0 8px 22px #37221718,
+    0 1px 3px #37221712;
   border-radius: 9px;
   padding: 9px 11px;
   font-size: 13px;
