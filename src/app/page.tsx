@@ -18,6 +18,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { SegmentMarquee } from "@/components/segment-marquee";
+import { HeroTags } from "@/components/hero-tags";
 import { companies, units, contacts, whatsapp } from "@/lib/content";
 import { getEvents } from "@/lib/db";
 export const dynamic = "force-dynamic";
@@ -93,22 +94,7 @@ export default async function Home() {
                 priority
               />
             </div>
-            <div className="visual-tag tag-food">
-              <ChefHat size={19} />
-              <span>FOOD SERVICE</span>
-            </div>
-            <div className="visual-tag tag-farm">
-              <Leaf size={19} />
-              <span>Fazenda Encanto</span>
-            </div>
-            <div className="visual-tag tag-market">
-              <ShoppingCart size={19} />
-              <span>Hiper Mercado</span>
-            </div>
-            <div className="visual-tag tag-logistics">
-              <Truck size={19} />
-              <span>Logística que conecta</span>
-            </div>
+            <HeroTags />
             <div className="visual-bottom">
               <span>Qualidade em cada conexão.</span>
               <MoveUpRight size={36} />

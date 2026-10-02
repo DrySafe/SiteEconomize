@@ -329,26 +329,28 @@ svg {
   letter-spacing: 0.13em;
   line-height: 1.6;
 }
+.hero-tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hero-tags[data-animated] .visual-tag {
+  opacity: 0;
+}
 .visual-tag {
   position: absolute;
   display: flex;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
   background: #fff;
   border: 1px solid #f5f0e9;
   box-shadow: 0 10px 30px #37221709;
   border-radius: 9px;
-  padding: 13px 17px;
-  font-size: 12px;
-  animation: arrive 1.5s both;
-}
-.tag-food {
-  top: 120px;
-  right: 20px;
-}
-.tag-logistics {
-  bottom: 100px;
-  left: 20px;
+  padding: 9px 11px;
+  font-size: 10px;
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  transform: translate(-50%, -50%);
 }
 .visual-tag svg {
   color: var(--burgundy);
@@ -436,14 +438,6 @@ svg {
 .tiny-cross {
   color: var(--burgundy);
   margin-right: 11px;
-}
-.tag-farm {
-  top: 190px;
-  left: 20px;
-}
-.tag-market {
-  bottom: 175px;
-  right: 20px;
 }
 .visual-top-label strong {
   font-size: 18px;
@@ -1719,16 +1713,8 @@ svg {
     inset: 80px 10px;
   }
   .visual-tag {
-    font-size: 10px;
-    padding: 10px;
-  }
-  .tag-food {
-    top: 75px;
-    right: 10px;
-  }
-  .tag-logistics {
-    bottom: 85px;
-    left: 10px;
+    font-size: 9px;
+    padding: 8px 9px;
   }
   .hero-content > p {
     font-size: 13px;
@@ -1747,14 +1733,6 @@ svg {
   }
   .segment-group li {
     font-size: 12px;
-  }
-  .tag-farm {
-    top: 145px;
-    left: 10px;
-  }
-  .tag-market {
-    bottom: 145px;
-    right: 10px;
   }
   .about,
   .history-band > .container {
@@ -1938,14 +1916,6 @@ svg {
   }
   .hero-symbol img {
     max-width: 285px;
-  }
-  .tag-food {
-    top: 90px;
-    right: 15px;
-  }
-  .tag-logistics {
-    bottom: 72px;
-    left: 15px;
   }
   .visual-top-label {
     font-size: 8px;
@@ -2270,16 +2240,6 @@ svg {
   }
 }
 
-@media (max-width: 600px) {
-  .tag-farm {
-    top: 150px;
-    left: 15px;
-  }
-  .tag-market {
-    bottom: 125px;
-    right: 15px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .segment-track {
     width: auto;
