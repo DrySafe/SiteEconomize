@@ -411,15 +411,15 @@ svg {
   stroke-linejoin: round;
 }
 .connection-network {
-  filter: drop-shadow(0 1px 3px #80604424);
+  filter: drop-shadow(0 1px 3px #51463c30);
 }
 .connection-active {
-  stroke-width: 1;
+  stroke-width: 1.25;
 }
 .connection-particle,
 .connection-core,
 .connection-port {
-  fill: #765538;
+  fill: #393533;
 }
 .connection-core {
   fill: #a66f3c;

@@ -65,9 +65,9 @@ export function animateHeroConnections(
   gradient.setAttribute("x1", "0%");
   gradient.setAttribute("x2", "100%");
   [
-    ["0%", "#a37649"],
-    ["50%", "#896b4e"],
-    ["100%", "#705e4d"],
+    ["0%", "#51463c"],
+    ["50%", "#393533"],
+    ["100%", "#282625"],
   ].forEach(([offset, color]) => {
     const stop = element("stop", "", gradient);
     stop.setAttribute("offset", offset);
@@ -194,7 +194,7 @@ export function animateHeroConnections(
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 3);
       neighbors.forEach(({ other, distance }) => {
-        ctx.strokeStyle = `rgba(134,112,89,${(1 - distance / 92) * 0.25 * point.depth})`;
+        ctx.strokeStyle = `rgba(104,98,90,${(1 - distance / 92) * 0.32 * point.depth})`;
         ctx.lineWidth = 0.65;
         ctx.beginPath();
         ctx.moveTo(point.x, point.y);
@@ -276,7 +276,7 @@ export function animateHeroConnections(
       const d = `M${origin.x.toFixed(2)},${origin.y.toFixed(2)} C${control1.x.toFixed(2)},${control1.y.toFixed(2)} ${control2.x.toFixed(2)},${control2.y.toFixed(2)} ${box.x.toFixed(2)},${box.y.toFixed(2)}`;
       const alpha = Math.pow(box.alpha, 2);
       signal.path.setAttribute("d", d);
-      signal.path.setAttribute("opacity", (alpha * 0.62).toFixed(4));
+      signal.path.setAttribute("opacity", (alpha * 0.82).toFixed(4));
       signal.port.setAttribute("cx", String(box.x));
       signal.port.setAttribute("cy", String(box.y));
       signal.port.setAttribute("r", "2.4");
