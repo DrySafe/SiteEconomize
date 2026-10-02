@@ -322,6 +322,7 @@ svg {
   filter: drop-shadow(0 30px 25px #7a250021);
 }
 .visual-top-label {
+  z-index: 2;
   position: absolute;
   top: 25px;
   left: 25px;
@@ -330,9 +331,33 @@ svg {
   line-height: 1.6;
 }
 .hero-tags {
+  z-index: 1;
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+.hero-connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hero-connections path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.connection-mesh {
+  stroke: #716d68;
+  stroke-width: 0.8;
+  opacity: 0.16;
+}
+.connection-active,
+.connection-lead {
+  stroke: #171717;
+  stroke-width: 1.1;
 }
 .hero-tags[data-animated] .visual-tag {
   animation: hero-tag-float 7s ease-in-out infinite;
@@ -347,6 +372,7 @@ svg {
   }
 }
 .visual-tag {
+  z-index: 1;
   position: absolute;
   display: flex;
   gap: 7px;
@@ -365,6 +391,7 @@ svg {
   color: var(--burgundy);
 }
 .visual-bottom {
+  z-index: 2;
   position: absolute;
   bottom: 24px;
   left: 25px;

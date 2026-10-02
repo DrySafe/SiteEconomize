@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ChefHat, Leaf, ShoppingCart, Truck } from "lucide-react";
 import { animateHeroTags, heroTagPositions } from "@/lib/hero-tag-animation";
+import { animateHeroConnections } from "@/lib/hero-connections";
 
 const tags = [
   { label: "FOOD SERVICE", icon: ChefHat },
@@ -13,9 +14,19 @@ const tags = [
 
 export function HeroTags() {
   const root = useRef<HTMLDivElement>(null);
+  const connections = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (root.current) return animateHeroTags(root.current);
+    if (!root.current || !connections.current) return;
+    const stopTags = animateHeroTags(root.current);
+    const stopConnections = animateHeroConnections(
+      connections.current,
+      root.current,
+    );
+    return () => {
+      stopConnections();
+      stopTags();
+    };
   }, []);
 
   return (
@@ -25,6 +36,14 @@ export function HeroTags() {
       role="img"
       aria-label={tags.map((tag) => tag.label).join(", ")}
     >
+      <svg
+        ref={connections}
+        className="hero-connections"
+        viewBox="0 0 600 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      />
       {tags.map(({ label, icon: Icon }, index) => (
         <div
           key={label}

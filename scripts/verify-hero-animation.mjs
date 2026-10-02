@@ -10,6 +10,16 @@ const javascript = ts.transpileModule(source, {
     module: ts.ModuleKind.ESNext,
   },
 }).outputText;
+const connectionsSource = await fs.readFile(
+  "src/lib/hero-connections.ts",
+  "utf8",
+);
+const connectionsJavascript = ts.transpileModule(connectionsSource, {
+  compilerOptions: {
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+  },
+}).outputText;
 const css = await fs.readFile("src/app/globals.css", "utf8");
 const logo = (await fs.readFile("public/images/Logo-PNG.png")).toString(
   "base64",
@@ -33,7 +43,7 @@ async function verify(viewport) {
   await page.setContent(`<style>${css}</style><div class="hero-visual" style="width:min(510px,calc(100vw - 40px));margin:20px;">
     <div class="visual-grid"></div><div class="visual-top-label"><strong>GRUPO E</strong><br>MUITAS POSSIBILIDADES.</div>
     <div class="hero-symbol"><img src="data:image/png;base64,${logo}" alt="GRUPO E"></div>
-    <div class="hero-tags">${labels.map((label, index) => `<div class="visual-tag" style="opacity:${index < 2 ? 1 : 0};left:${index % 2 ? 72 : 28}%;top:${[26, 39, 65, 78][index]}%;animation-delay:${index * -1.7}s"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor"/></svg><span>${label}</span></div>`).join("")}</div>
+    <div class="hero-tags"><svg class="hero-connections" viewBox="0 0 600 600" preserveAspectRatio="none"></svg>${labels.map((label, index) => `<div class="visual-tag" style="opacity:${index < 2 ? 1 : 0};left:${index % 2 ? 72 : 28}%;top:${[26, 39, 65, 78][index]}%;animation-delay:${index * -1.7}s"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor"/></svg><span>${label}</span></div>`).join("")}</div>
     <div class="visual-bottom">Qualidade em cada conexão.</div></div>`);
   await page.evaluate(() => {
     window.heroTransitions = [];
@@ -57,6 +67,16 @@ async function verify(viewport) {
   await page.waitForFunction(() =>
     document.querySelector(".hero-tags").hasAttribute("data-animated"),
   );
+  await page.addScriptTag({
+    type: "module",
+    content: `${connectionsJavascript}\nwindow.cleanupConnections = animateHeroConnections(document.querySelector('.hero-connections'), document.querySelector('.hero-tags'));`,
+  });
+  await page.waitForFunction(() =>
+    document.querySelector(".connection-mesh")?.getAttribute("d"),
+  );
+  await page.screenshot({
+    path: `/tmp/grupoe-connections-initial-${viewport.width}.png`,
+  });
   const result = await page.evaluate(async (milliseconds) => {
     const elements = Array.from(document.querySelectorAll(".visual-tag"));
     const began = performance.now();
@@ -67,6 +87,9 @@ async function verify(viewport) {
       violations: [],
       positions: elements.map(() => new Set()),
       floatPositions: new Set(),
+      meshPaths: new Set(),
+      networkShapes: new Set(),
+      missingMesh: 0,
     };
     await new Promise((resolve) => {
       function sample() {
@@ -78,6 +101,29 @@ async function verify(viewport) {
         summary.min = Math.min(summary.min, visible);
         summary.max = Math.max(summary.max, visible);
         summary.samples++;
+        if (summary.samples % 15 === 0) {
+          const mesh = Array.from(
+            document.querySelectorAll(".connection-mesh"),
+          );
+          if (
+            !mesh.length ||
+            mesh.some(
+              (path) =>
+                Number(getComputedStyle(path).opacity) === 0 ||
+                !path.getAttribute("d"),
+            )
+          )
+            summary.missingMesh++;
+          summary.meshPaths.add(mesh[0]?.getAttribute("d"));
+          summary.networkShapes.add(
+            Array.from(document.querySelectorAll(".connection-active"))
+              .map((path, index) =>
+                Number(path.getAttribute("opacity")) > 0.2 ? index : null,
+              )
+              .filter((index) => index !== null)
+              .join(","),
+          );
+        }
         if (visible < 1 || visible > 3 || !anchor)
           summary.violations.push({ time: performance.now() - began, opacity });
         elements.forEach((element, index) => {
@@ -98,6 +144,8 @@ async function verify(viewport) {
       positions: summary.positions.map((set) => set.size),
       floatPositions: summary.floatPositions.size,
       transitions: window.heroTransitions,
+      meshPaths: summary.meshPaths.size,
+      networkShapes: summary.networkShapes.size,
     };
   }, duration);
   assert.equal(
@@ -124,6 +172,16 @@ async function verify(viewport) {
     result.floatPositions > 20,
     "O balanço vertical deve continuar durante os fades.",
   );
+  assert.equal(
+    result.missingMesh,
+    0,
+    "As linhas cinzas não podem desaparecer.",
+  );
+  assert.ok(result.meshPaths > 20, "A malha deve ondular continuamente.");
+  assert.ok(
+    result.networkShapes > 5,
+    "Os caminhos pretos precisam se reconectar.",
+  );
   assert.equal(errors.length, 0, errors.join("\n"));
   await page.screenshot({ path: `/tmp/grupoe-hero-${viewport.width}.png` });
   // Check a pause/restart and reduced motion, which used to reset opacity.
@@ -141,11 +199,26 @@ async function verify(viewport) {
       ),
     2,
   );
+  await page.waitForTimeout(150);
+  const stillPath = await page
+    .locator(".connection-mesh")
+    .first()
+    .getAttribute("d");
+  await page.waitForTimeout(200);
+  assert.equal(
+    await page.locator(".connection-mesh").first().getAttribute("d"),
+    stillPath,
+    "Movimento reduzido deve parar as ondas.",
+  );
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.waitForFunction(() =>
     document.querySelector(".hero-tags").hasAttribute("data-animated"),
   );
-  await page.evaluate(() => window.cleanupHero());
+  await page.evaluate(() => {
+    window.cleanupConnections();
+    window.cleanupHero();
+  });
+  assert.equal(await page.locator(".hero-connections path").count(), 0);
   assert.equal(
     await page
       .locator(".visual-tag")
