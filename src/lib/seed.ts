@@ -13,7 +13,7 @@ const course = (
   excerpt,
   body:
     excerpt +
-    "\n\nAprendizado e troca de experiências para ampliar o repertório de quem trabalha com produção food.\n\nEste encontro faz parte do nosso arquivo. Converse com nossa equipe para conhecer as próximas oportunidades de aprendizado no Centro Culinário Hiper Economize.",
+    "\n\nAprendizado e troca de experiências para ampliar o repertório de quem trabalha com FOOD SERVICE.\n\nEste encontro faz parte do nosso arquivo. Converse com nossa equipe para conhecer as próximas oportunidades de aprendizado no Centro Culinário Hiper Economize.",
   image,
   category: "Cursos",
   location: "Centro Culinário Hiper Economize · Aracaju",

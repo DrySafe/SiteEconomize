@@ -363,6 +363,7 @@ svg {
   justify-content: space-between;
   font-size: 11px;
 }
+/* Equal copies keep the slow, leftward movement seamless. */
 .segment-strip {
   border-block: 1px solid var(--line);
   background: #faf9f7;
@@ -370,22 +371,83 @@ svg {
 .segment-strip > .container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding-block: 25px;
+  gap: 28px;
+  padding-block: 22px;
 }
-.segment-strip span {
-  font-size: 13px;
-  white-space: nowrap;
-}
-.segment-strip > .container > span:first-child {
+.segment-label {
+  flex-shrink: 0;
   font-size: 8px;
   letter-spacing: 0.12em;
   color: var(--muted);
 }
+.segment-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 25px,
+    #000 calc(100% - 25px),
+    transparent
+  );
+}
+.segment-track {
+  display: flex;
+  width: max-content;
+  animation: segments-left 70s linear infinite;
+}
+.segment-group {
+  display: flex;
+  align-items: center;
+  gap: 42px;
+  padding: 0 42px 0 0;
+  margin: 0;
+  list-style: none;
+}
+.segment-group li {
+  white-space: nowrap;
+  font-size: 13px;
+}
+.segment-track.is-paused,
+.segment-viewport:hover .segment-track {
+  animation-play-state: paused;
+}
+.segment-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--burgundy);
+  cursor: pointer;
+}
+.segment-toggle:hover {
+  background: var(--cream);
+}
+@keyframes segments-left {
+  to {
+    transform: translateX(-50%);
+  }
+}
 .tiny-cross {
   color: var(--burgundy);
   margin-right: 11px;
+}
+.tag-farm {
+  top: 190px;
+  left: 20px;
+}
+.tag-market {
+  bottom: 175px;
+  right: 20px;
+}
+.visual-top-label strong {
+  font-size: 18px;
+  letter-spacing: -0.04em;
 }
 .about {
   display: grid;
@@ -656,36 +718,32 @@ svg {
   box-shadow: 0 15px 35px #3c25110a;
 }
 .event-image {
-  aspect-ratio: 1.55;
+  aspect-ratio: 4 / 5;
   position: relative;
   display: block;
   background: #eee6db;
   overflow: hidden;
 }
 .event-image img {
-  object-fit: cover;
-  object-position: center 25%;
-  transition: transform 0.4s;
-}
-.event-card:hover .event-image img {
-  transform: scale(1.035);
+  object-fit: contain;
+  padding: 16px;
 }
 .image-category,
 .archive-badge {
-  position: absolute;
-  top: 16px;
-  background: #fff;
+  background: var(--cream);
   border-radius: 5px;
   padding: 5px 10px;
   font-size: 9px;
   font-weight: 600;
   line-height: 1.6;
 }
-.image-category {
-  left: 16px;
+.event-card-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 .archive-badge {
-  right: 16px;
   background: #26211fdd;
   color: #fff;
 }
@@ -1680,15 +1738,23 @@ svg {
     padding: 13px;
   }
   .segment-strip > .container {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 16px 25px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 12px;
   }
-  .segment-strip > .container > span:first-child {
-    width: 100%;
+  .segment-label {
+    grid-column: 1 / -1;
   }
-  .segment-strip span {
-    font-size: 11px;
+  .segment-group li {
+    font-size: 12px;
+  }
+  .tag-farm {
+    top: 145px;
+    left: 10px;
+  }
+  .tag-market {
+    bottom: 145px;
+    right: 10px;
   }
   .about,
   .history-band > .container {
@@ -1980,7 +2046,7 @@ svg {
     display: flex;
   }
   .event-image {
-    aspect-ratio: 1.65;
+    aspect-ratio: 4 / 5;
   }
   .event-card h3 {
     font-size: 26px;
@@ -2201,5 +2267,38 @@ svg {
   [data-reveal].will-reveal {
     opacity: 1;
     transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .tag-farm {
+    top: 150px;
+    left: 15px;
+  }
+  .tag-market {
+    bottom: 125px;
+    right: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segment-track {
+    width: auto;
+    transform: none;
+  }
+  .segment-group {
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    padding: 0;
+  }
+  .segment-group[aria-hidden="true"],
+  .segment-toggle {
+    display: none;
+  }
+  .segment-viewport {
+    mask-image: none;
+    overflow: visible;
+  }
+  .segment-strip > .container {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -21,14 +21,14 @@ export const companies = [
     name: "Lojas Economize",
     type: "VAREJO ESPECIALIZADO",
     description:
-      "Tudo para a produção food, perto de você. Em Aracaju, Glória e Lagarto.",
+      "Tudo para o FOOD SERVICE, perto de você. Em Aracaju, Glória e Lagarto.",
     icon: "store",
   },
   {
     name: "Hiper Economize",
     type: "SUPERMERCADO",
     description:
-      "Uma experiência completa de compra, com supermercado e linha food em Aracaju.",
+      "Uma experiência completa de compra, com supermercado e linha FOOD SERVICE em Aracaju.",
     icon: "cart",
   },
   {
@@ -64,7 +64,7 @@ export const units = [
   {
     name: "Economize Centro",
     city: "Aracaju",
-    detail: "Insumos e embalagens para produção food",
+    detail: "Insumos e embalagens para FOOD SERVICE",
   },
   {
     name: "Hiper Economize",

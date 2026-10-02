@@ -27,7 +27,7 @@ export default async function Blog() {
               <p>
                 Cursos, encontros e inspiração para quem
                 <br />
-                quer ir além na produção food.
+                quer ir além no FOOD SERVICE.
               </p>
               <a href="#explorar" className="text-link">
                 Explore os conteúdos <ArrowDown size={18} />

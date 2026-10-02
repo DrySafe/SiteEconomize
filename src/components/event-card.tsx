@@ -19,10 +19,12 @@ export function EventCard({ entry }: { entry: EventEntry }) {
           fill
           sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
         />
-        <span className="image-category">{entry.category}</span>
-        {past && <span className="archive-badge">Arquivo</span>}
       </Link>
       <div className="event-card-body">
+        <div className="event-card-badges">
+          <span className="image-category">{entry.category}</span>
+          {past && <span className="archive-badge">Arquivo</span>}
+        </div>
         <p className="event-meta">
           {entry.eventDate
             ? formatDate(entry.eventDate)

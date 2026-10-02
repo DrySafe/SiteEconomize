@@ -17,6 +17,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
+import { SegmentMarquee } from "@/components/segment-marquee";
 import { companies, units, contacts, whatsapp } from "@/lib/content";
 import { getEvents } from "@/lib/db";
 export const dynamic = "force-dynamic";
@@ -79,9 +80,9 @@ export default async function Home() {
           <div className="hero-visual">
             <div className="visual-grid" />
             <span className="visual-top-label">
-              MUITAS POSSIBILIDADES.
+              <strong>GRUPO E</strong>
               <br />
-              UM SÓ GRUPO.
+              MUITAS POSSIBILIDADES.
             </span>
             <div className="hero-symbol">
               <Image
@@ -94,7 +95,15 @@ export default async function Home() {
             </div>
             <div className="visual-tag tag-food">
               <ChefHat size={19} />
-              <span>Produção food</span>
+              <span>FOOD SERVICE</span>
+            </div>
+            <div className="visual-tag tag-farm">
+              <Leaf size={19} />
+              <span>Fazenda Encanto</span>
+            </div>
+            <div className="visual-tag tag-market">
+              <ShoppingCart size={19} />
+              <span>Hiper Mercado</span>
             </div>
             <div className="visual-tag tag-logistics">
               <Truck size={19} />
@@ -106,23 +115,7 @@ export default async function Home() {
             </div>
           </div>
         </section>
-        <div className="segment-strip">
-          <div className="container">
-            <span>PARCEIRO DE QUEM PRODUZ</span>
-            {[
-              "Panificação",
-              "Confeitaria",
-              "Açaí & sorvetes",
-              "Pizzarias",
-              "Restaurantes",
-            ].map((s) => (
-              <span key={s}>
-                <span className="tiny-cross">+</span>
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
+        <SegmentMarquee />
         <section id="sobre" className="container section about" data-reveal>
           <div>
             <span className="eyebrow">01 / NOSSA ESSÊNCIA</span>
@@ -374,7 +367,7 @@ export default async function Home() {
             {[
               [
                 "Quem pode comprar com o GRUPO E?",
-                "Atendemos negócios de panificação, confeitaria, açaí, sorvetes, pizzarias, restaurantes e outros segmentos de produção food. Nossas operações de varejo também atendem consumidores.",
+                "Atendemos negócios de panificação, confeitaria, açaí, sorvetes, pizzarias, restaurantes, lanchonetes, hamburguerias e outros segmentos de FOOD SERVICE. Nossas operações de varejo também atendem consumidores.",
               ],
               [
                 "Como solicitar um orçamento?",

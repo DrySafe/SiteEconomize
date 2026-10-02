@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s | GRUPO E",
   },
   description:
-    "Da distribuição à produção food, o GRUPO E conecta alimentos, embalagens, varejo e logística em Sergipe.",
+    "Da distribuição ao FOOD SERVICE, o GRUPO E conecta alimentos, embalagens, varejo e logística em Sergipe.",
   icons: { icon: "/images/Logo-PNG.png" },
 };
 export default function RootLayout({
