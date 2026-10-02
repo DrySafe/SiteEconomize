@@ -335,7 +335,16 @@ svg {
   pointer-events: none;
 }
 .hero-tags[data-animated] .visual-tag {
-  opacity: 0;
+  animation: hero-tag-float 7s ease-in-out infinite;
+}
+@keyframes hero-tag-float {
+  0%,
+  100% {
+    translate: 0 3px;
+  }
+  50% {
+    translate: 0 -3px;
+  }
 }
 .visual-tag {
   position: absolute;
@@ -347,7 +356,7 @@ svg {
   box-shadow: 0 10px 30px #37221709;
   border-radius: 9px;
   padding: 9px 11px;
-  font-size: 10px;
+  font-size: 13px;
   white-space: nowrap;
   max-width: calc(100% - 24px);
   transform: translate(-50%, -50%);
@@ -1713,7 +1722,7 @@ svg {
     inset: 80px 10px;
   }
   .visual-tag {
-    font-size: 9px;
+    font-size: 12px;
     padding: 8px 9px;
   }
   .hero-content > p {

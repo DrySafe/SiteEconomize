@@ -10,13 +10,13 @@ const tags = [
   { label: "Logística que conecta", icon: Truck },
 ];
 
-// Four separated areas keep the labels inside the hero, including on mobile.
-const positions = [
-  { x: 25, y: 30 },
-  { x: 75, y: 41 },
-  { x: 25, y: 62 },
-  { x: 75, y: 74 },
-];
+// One spare row lets a hidden label move without covering another label.
+const rows = [26, 39, 52, 65, 78];
+const initialRows = [0, 1, 3, 4];
+const positions = initialRows.map((row, index) => ({
+  x: index % 2 === 0 ? 28 : 72,
+  y: rows[row],
+}));
 
 export function HeroTags() {
   const root = useRef<HTMLDivElement>(null);
@@ -30,13 +30,30 @@ export function HeroTags() {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     let generation = 0;
     let visible = true;
-    let animations: Animation[] = [];
+    let animation: Animation | undefined;
+    const occupiedRows = [...initialRows];
 
     function stop() {
       generation += 1;
-      animations.forEach((animation) => animation.cancel());
-      animations = [];
+      animation?.cancel();
+      animation = undefined;
       container!.removeAttribute("data-animated");
+    }
+
+    async function fade(
+      element: HTMLElement,
+      from: number,
+      to: number,
+      duration: number,
+    ) {
+      const previousAnimation = animation;
+      animation = element.animate([{ opacity: from }, { opacity: to }], {
+        duration,
+        easing: "ease-in-out",
+        fill: "forwards",
+      });
+      previousAnimation?.cancel();
+      await animation.finished.catch(() => undefined);
     }
 
     async function start() {
@@ -44,46 +61,39 @@ export function HeroTags() {
       if (preference.matches || !visible) return;
       const current = generation;
       container!.setAttribute("data-animated", "true");
+      let previous = -1;
 
       while (current === generation) {
-        const slots = [...positions];
-        for (let i = slots.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [slots[i], slots[j]] = [slots[j], slots[i]];
-        }
-        animations = elements.map((element, index) => {
-          const slot = slots[index];
-          element.style.left = `clamp(76px, ${slot.x + (Math.random() - 0.5) * 3}%, calc(100% - 76px))`;
-          element.style.top = `${slot.y + (Math.random() - 0.5) * 5}%`;
-          return element.animate(
-            [
-              {
-                opacity: 0,
-                transform: "translate(-50%, calc(-50% + 6px))",
-                offset: 0,
-              },
-              { opacity: 1, transform: "translate(-50%, -50%)", offset: 0.24 },
-              { opacity: 1, transform: "translate(-50%, -50%)", offset: 0.6 },
-              {
-                opacity: 0,
-                transform: "translate(-50%, calc(-50% - 4px))",
-                offset: 0.9,
-              },
-              { opacity: 0, offset: 1 },
-            ],
-            {
-              duration: 11000 + Math.random() * 1500,
-              delay: index * 600,
-              easing: "ease-in-out",
-            },
-          );
-        });
-        // All labels finish fading out before their positions change.
-        await Promise.all(
-          animations.map((animation) =>
-            animation.finished.catch(() => undefined),
-          ),
-        );
+        const candidates = elements
+          .map((_, index) => index)
+          .filter((index) => index !== previous);
+        const index = candidates[Math.floor(Math.random() * candidates.length)];
+        const element = elements[index];
+        previous = index;
+
+        // Only one label fades at a time; the other three stay fully visible.
+        await fade(element, 1, 0, 1900);
+        if (current !== generation) return;
+
+        const available = rows
+          .map((_, row) => row)
+          .filter((row) => !occupiedRows.includes(row));
+        const row = available[Math.floor(Math.random() * available.length)];
+        occupiedRows[index] = row;
+        const halfWidth = element.offsetWidth / 2 + 12;
+        const width = container!.clientWidth;
+        const x =
+          halfWidth + Math.random() * Math.max(0, width - halfWidth * 2);
+        element.style.left = `clamp(${halfWidth}px, ${(x / width) * 100}%, calc(100% - ${halfWidth}px))`;
+        element.style.top = `${rows[row]}%`;
+
+        await fade(element, 0, 1, 2200);
+        if (current !== generation) return;
+        animation?.cancel();
+        // A calm interval separates each independently timed appearance.
+        await fade(element, 1, 1, 1600 + Math.random() * 1600);
+        if (current !== generation) return;
+        animation?.cancel();
       }
     }
 
@@ -113,8 +123,9 @@ export function HeroTags() {
           className="visual-tag"
           aria-hidden="true"
           style={{
-            left: `clamp(76px, ${positions[index].x}%, calc(100% - 76px))`,
+            left: `clamp(100px, ${positions[index].x}%, calc(100% - 100px))`,
             top: `${positions[index].y}%`,
+            animationDelay: `${index * -1.7}s`,
           }}
         >
           <Icon size={14} />
