@@ -282,29 +282,58 @@ svg {
   background: var(--ink);
 }
 .hero-visual {
-  background: #f3eee5;
-  border-radius: 18px;
-  min-height: 510px;
+  background: radial-gradient(
+    ellipse at 58% 48%,
+    #3d221d 0%,
+    #251a19 35%,
+    #131313 78%
+  );
+  border: 1px solid #362925;
+  border-radius: 24px;
+  min-height: 550px;
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  perspective: 1000px;
+}
+.hero-visual::before {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(
+    from 30deg,
+    transparent 0 38%,
+    #cf7f291c 44%,
+    transparent 52% 100%
+  );
+  animation: hero-ambient-orbit 36s linear infinite;
+  pointer-events: none;
 }
 .visual-grid {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(#c0b19814 1px, transparent 1px),
-    linear-gradient(90deg, #c0b19814 1px, transparent 1px);
-  background-size: 54px 54px;
+  background-image: radial-gradient(#e7c7a611 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(ellipse, #000, transparent 75%);
+}
+.hero-flow-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 .hero-symbol {
+  z-index: 1;
   position: absolute;
-  inset: 55px 25px 80px;
+  inset: 90px 30px 75px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotate(-8deg);
-  animation: arrive 1.2s both;
+  transform: perspective(900px) rotateX(var(--hero-tilt-x, 0deg))
+    rotateY(var(--hero-tilt-y, 0deg)) rotate(-8deg);
+  animation: hero-logo-drift 8s ease-in-out infinite;
+  pointer-events: none;
 }
 .hero-symbol:before {
   content: "";
@@ -312,17 +341,49 @@ svg {
   width: 80%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #e8ddcc;
-  filter: blur(30px);
+  background: radial-gradient(
+    circle,
+    #e65e161f,
+    #ffb14908 50%,
+    transparent 72%
+  );
+  filter: blur(15px);
+  z-index: -1;
+}
+.hero-symbol:after {
+  content: "";
+  position: absolute;
+  width: 82%;
+  aspect-ratio: 1;
+  border: 1px solid #e2ad671c;
+  border-right-color: #ffce8552;
+  border-radius: 50%;
+  transform: rotateX(58deg) rotate(-20deg);
   z-index: -1;
 }
 .hero-symbol img {
-  width: 85%;
+  width: 64%;
+  max-width: 310px;
   height: auto;
-  filter: drop-shadow(0 30px 25px #7a250021);
+  filter: drop-shadow(0 22px 20px #0007) drop-shadow(0 0 28px #f963161a);
+}
+@keyframes hero-logo-drift {
+  0%,
+  100% {
+    translate: 0 5px;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+@keyframes hero-ambient-orbit {
+  to {
+    rotate: 360deg;
+  }
 }
 .visual-top-label {
-  z-index: 2;
+  color: #d3c5b6;
+  z-index: 3;
   position: absolute;
   top: 25px;
   left: 25px;
@@ -331,7 +392,7 @@ svg {
   line-height: 1.6;
 }
 .hero-tags {
-  z-index: 1;
+  z-index: 2;
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -349,25 +410,19 @@ svg {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.connection-mesh {
-  stroke: #716d68;
-  stroke-width: 0.9;
-  opacity: 0.29;
-}
 .connection-network {
-  filter: drop-shadow(0 2px 1.5px #16131035);
+  filter: drop-shadow(0 0 5px #ffb76640);
 }
 .connection-active {
-  stroke: #171717;
-  stroke-width: 1.3;
+  stroke-width: 1;
 }
-.connection-dust {
-  filter: drop-shadow(0 1px 1px #16131040);
+.connection-particle,
+.connection-core,
+.connection-port {
+  fill: #fff0d3;
 }
-.connection-particle {
-  fill: #171717;
-  stroke: #ffffffb3;
-  stroke-width: 0.5;
+.connection-core {
+  fill: #ffb761;
 }
 .hero-tags[data-animated] .visual-tag {
   animation: hero-tag-float 7s ease-in-out infinite;
@@ -387,11 +442,12 @@ svg {
   display: flex;
   gap: 7px;
   align-items: center;
-  background: #fff;
-  border: 1px solid #f5f0e9;
+  background: linear-gradient(135deg, #fffffff7, #fff8edf0);
+  border: 1px solid #ffffffcc;
+  backdrop-filter: blur(12px);
   box-shadow:
-    0 8px 22px #37221718,
-    0 1px 3px #37221712;
+    0 12px 28px #0003,
+    inset 0 1px 0 #fff;
   border-radius: 9px;
   padding: 9px 11px;
   font-size: 13px;
@@ -403,7 +459,8 @@ svg {
   color: var(--burgundy);
 }
 .visual-bottom {
-  z-index: 2;
+  color: #c9bba9;
+  z-index: 3;
   position: absolute;
   bottom: 24px;
   left: 25px;
@@ -1755,7 +1812,7 @@ svg {
     font-size: 40px;
   }
   .hero-visual {
-    min-height: 410px;
+    min-height: 500px;
   }
   .hero-symbol {
     inset: 80px 10px;
@@ -1957,13 +2014,13 @@ svg {
     margin-top: 25px;
   }
   .hero-visual {
-    min-height: 350px;
+    min-height: 440px;
   }
   .hero-symbol {
-    inset: 35px 40px 50px;
+    inset: 80px 30px 70px;
   }
   .hero-symbol img {
-    max-width: 285px;
+    max-width: 230px;
   }
   .visual-top-label {
     font-size: 8px;

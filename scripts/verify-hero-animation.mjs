@@ -71,8 +71,8 @@ async function verify(viewport) {
     type: "module",
     content: `${connectionsJavascript}\nwindow.cleanupConnections = animateHeroConnections(document.querySelector('.hero-connections'), document.querySelector('.hero-tags'));`,
   });
-  await page.waitForFunction(() =>
-    document.querySelector(".connection-mesh")?.getAttribute("d"),
+  await page.waitForFunction(
+    () => Number(document.querySelector(".hero-flow-field")?.dataset.frame) > 2,
   );
   await page.screenshot({
     path: `/tmp/grupoe-connections-initial-${viewport.width}.png`,
@@ -80,20 +80,19 @@ async function verify(viewport) {
   const result = await page.evaluate(async (milliseconds) => {
     const elements = Array.from(document.querySelectorAll(".visual-tag"));
     const began = performance.now();
+    const canvas = document.querySelector(".hero-flow-field");
+    const initialFrame = Number(canvas.dataset.frame);
     const summary = {
       min: 4,
       max: 0,
       samples: 0,
       violations: [],
       positions: elements.map(() => new Set()),
-      floatPositions: new Set(),
-      meshPaths: new Set(),
       networkShapes: new Set(),
-      missingMesh: 0,
-      orphanLines: 0,
       wrongEndpoints: 0,
+      orphanLines: 0,
       particleFrames: 0,
-      roundedPaths: 0,
+      sparkFrames: 0,
     };
     await new Promise((resolve) => {
       function sample() {
@@ -101,75 +100,14 @@ async function verify(viewport) {
           Number(getComputedStyle(element).opacity),
         );
         const visible = opacity.filter((value) => value > 0.000001).length;
-        const anchor = opacity.some((value) => value >= 0.999);
         summary.min = Math.min(summary.min, visible);
         summary.max = Math.max(summary.max, visible);
         summary.samples++;
-        if (summary.samples % 15 === 0) {
-          const mesh = Array.from(
-            document.querySelectorAll(".connection-mesh"),
-          );
-          if (
-            !mesh.length ||
-            mesh.some(
-              (path) =>
-                Number(getComputedStyle(path).opacity) === 0 ||
-                !path.getAttribute("d"),
-            )
-          )
-            summary.missingMesh++;
-          const bounds = document
-            .querySelector(".hero-tags")
-            .getBoundingClientRect();
-          const lines = Array.from(
-            document.querySelectorAll(".connection-active"),
-          );
-          if (
-            Array.from(document.querySelectorAll(".connection-particle")).some(
-              (dot) => Number(dot.getAttribute("opacity")) > 0.05,
-            )
-          )
-            summary.particleFrames++;
-          lines.forEach((path) => {
-            if (
-              Number(path.getAttribute("opacity")) <= 0.005 ||
-              !path.getAttribute("d")
-            )
-              return;
-            const from = Number(path.dataset.from),
-              to = Number(path.dataset.to);
-            if (opacity[from] < 0.03 || opacity[to] < 0.03)
-              summary.orphanLines++;
-            const length = path.getTotalLength();
-            const endpoints = [
-              path.getPointAtLength(0),
-              path.getPointAtLength(length),
-            ];
-            [from, to].forEach((label, index) => {
-              const rect = elements[label].getBoundingClientRect();
-              const x = ((rect.left - bounds.left) / bounds.width) * 600;
-              const y =
-                ((rect.top + rect.height / 2 - bounds.top) / bounds.height) *
-                600;
-              if (
-                Math.abs(endpoints[index].x - x) > 1.5 ||
-                Math.abs(endpoints[index].y - y) > 1.5
-              )
-                summary.wrongEndpoints++;
-            });
-            if (path.getAttribute("d").includes("Q")) summary.roundedPaths++;
-          });
-          summary.meshPaths.add(mesh[0]?.getAttribute("d"));
-          summary.networkShapes.add(
-            Array.from(document.querySelectorAll(".connection-active"))
-              .map((path, index) =>
-                Number(path.getAttribute("opacity")) > 0.2 ? index : null,
-              )
-              .filter((index) => index !== null)
-              .join(","),
-          );
-        }
-        if (visible < 1 || visible > 3 || !anchor)
+        if (
+          visible < 1 ||
+          visible > 3 ||
+          !opacity.some((value) => value >= 0.999)
+        )
           summary.violations.push({ time: performance.now() - began, opacity });
         elements.forEach((element, index) => {
           if (opacity[index] > 0.01)
@@ -177,7 +115,47 @@ async function verify(viewport) {
               `${element.style.left}|${element.style.top}`,
             );
         });
-        summary.floatPositions.add(getComputedStyle(elements[0]).translate);
+        if (summary.samples % 15 === 0) {
+          const bounds = document
+            .querySelector(".hero-tags")
+            .getBoundingClientRect();
+          const core = document.querySelector(".connection-core");
+          const origin = {
+            x: Number(core.getAttribute("cx")),
+            y: Number(core.getAttribute("cy")),
+          };
+          if (Number(canvas.dataset.sparks) > 0) summary.sparkFrames++;
+          if (
+            Array.from(document.querySelectorAll(".connection-particle")).some(
+              (dot) => Number(dot.getAttribute("opacity")) > 0.05,
+            )
+          )
+            summary.particleFrames++;
+          document.querySelectorAll(".connection-active").forEach((path) => {
+            if (
+              Number(path.getAttribute("opacity")) <= 0.005 ||
+              !path.getAttribute("d")
+            )
+              return;
+            const to = Number(path.dataset.to);
+            if (opacity[to] < 0.03) summary.orphanLines++;
+            const start = path.getPointAtLength(0),
+              end = path.getPointAtLength(path.getTotalLength());
+            const rect = elements[to].getBoundingClientRect();
+            const target = {
+              x: ((rect.left - bounds.left) / bounds.width) * 600,
+              y:
+                ((rect.top + rect.height / 2 - bounds.top) / bounds.height) *
+                600,
+            };
+            if (
+              Math.hypot(start.x - origin.x, start.y - origin.y) > 1.5 ||
+              Math.hypot(end.x - target.x, end.y - target.y) > 1.5
+            )
+              summary.wrongEndpoints++;
+            summary.networkShapes.add(path.getAttribute("d"));
+          });
+        }
         if (performance.now() - began < milliseconds)
           requestAnimationFrame(sample);
         else resolve();
@@ -187,70 +165,81 @@ async function verify(viewport) {
     return {
       ...summary,
       positions: summary.positions.map((set) => set.size),
-      floatPositions: summary.floatPositions.size,
-      transitions: window.heroTransitions,
-      meshPaths: summary.meshPaths.size,
       networkShapes: summary.networkShapes.size,
+      transitions: window.heroTransitions,
+      frames: Number(canvas.dataset.frame) - initialFrame,
     };
   }, duration);
   assert.equal(
     result.violations.length,
     0,
-    JSON.stringify(result.violations.slice(0, 5)),
+    JSON.stringify(result.violations.slice(0, 3)),
   );
-  assert.equal(
-    result.min,
-    1,
-    "A animação deve chegar a um único item visível.",
-  );
+  assert.equal(result.min, 1);
   assert.equal(result.max, 3);
   assert.ok(
     result.positions.every((count) => count >= 2),
-    "Todos os itens precisam mudar de posição.",
-  );
-  assert.ok(
-    new Set(result.transitions.map((entry) => Math.round(entry.duration)))
-      .size >= 5,
-    "As durações devem variar.",
-  );
-  assert.ok(
-    result.floatPositions > 20,
-    "O balanço vertical deve continuar durante os fades.",
-  );
-  assert.equal(
-    result.missingMesh,
-    0,
-    "As linhas cinzas não podem desaparecer.",
-  );
-  assert.ok(result.meshPaths > 20, "A malha deve ondular continuamente.");
-  assert.ok(
-    result.networkShapes > 5,
-    "Os caminhos pretos precisam se reconectar.",
-  );
-  assert.equal(
-    result.orphanLines,
-    0,
-    "Nenhuma linha deve ficar acesa sem duas caixas visíveis.",
+    "Todos os itens devem mudar de posição.",
   );
   assert.equal(
     result.wrongEndpoints,
     0,
-    "As conexões precisam tocar apenas a ponta esquerda.",
+    "As linhas devem ligar a logo à ponta esquerda das caixas.",
+  );
+  assert.equal(
+    result.orphanLines,
+    0,
+    "Nenhum sinal deve ficar aceso sem a caixa correspondente.",
+  );
+  assert.ok(
+    result.networkShapes > 30,
+    "As curvas devem se movimentar continuamente.",
   );
   assert.ok(
     result.particleFrames > 10,
-    "Partículas devem acompanhar conexões e desconexões.",
+    "Os pulsos devem percorrer as conexões.",
   );
   assert.ok(
-    result.roundedPaths > 10,
-    "Os trajetos precisam ter cantos arredondados.",
+    result.sparkFrames > 5,
+    "Entradas e saídas devem emitir partículas.",
+  );
+  assert.ok(
+    result.frames > duration / 40,
+    "O campo de partículas deve manter pelo menos 25 quadros/s.",
   );
   assert.equal(errors.length, 0, errors.join("\n"));
   await page.screenshot({ path: `/tmp/grupoe-hero-${viewport.width}.png` });
-  // Check a pause/restart and reduced motion, which used to reset opacity.
+  const stage = await page.locator(".hero-visual").boundingBox();
+  await page.mouse.move(
+    stage.x + stage.width * 0.8,
+    stage.y + stage.height * 0.2,
+  );
+  await page.waitForTimeout(450);
+  assert.ok(
+    Math.abs(
+      Number.parseFloat(
+        await page
+          .locator(".hero-visual")
+          .evaluate((element) =>
+            element.style.getPropertyValue("--hero-tilt-y"),
+          ),
+      ),
+    ) > 1,
+    "A cena deve responder ao cursor.",
+  );
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.waitForFunction(
     () => !document.querySelector(".hero-tags").hasAttribute("data-animated"),
+  );
+  await page.waitForTimeout(150);
+  const still = await page
+    .locator(".hero-flow-field")
+    .getAttribute("data-frame");
+  await page.waitForTimeout(250);
+  assert.equal(
+    await page.locator(".hero-flow-field").getAttribute("data-frame"),
+    still,
+    "Movimento reduzido deve pausar o cenário.",
   );
   assert.equal(
     await page
@@ -261,17 +250,6 @@ async function verify(viewport) {
             .length,
       ),
     2,
-  );
-  await page.waitForTimeout(150);
-  const stillPath = await page
-    .locator(".connection-mesh")
-    .first()
-    .getAttribute("d");
-  await page.waitForTimeout(200);
-  assert.equal(
-    await page.locator(".connection-mesh").first().getAttribute("d"),
-    stillPath,
-    "Movimento reduzido deve parar as ondas.",
   );
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.waitForFunction(() =>
@@ -281,23 +259,13 @@ async function verify(viewport) {
     window.cleanupConnections();
     window.cleanupHero();
   });
+  assert.equal(await page.locator(".hero-flow-field").count(), 0);
   assert.equal(await page.locator(".hero-connections path").count(), 0);
-  assert.equal(
-    await page
-      .locator(".visual-tag")
-      .evaluateAll(
-        (items) =>
-          items.filter((item) => Number(getComputedStyle(item).opacity) > 0)
-            .length,
-      ),
-    2,
-  );
   console.log(
-    `${viewport.width}px: ${result.samples} frames; ${result.min}–${result.max} itens visíveis; posições por item: ${result.positions.join(", ")}; ${result.transitions.length} transições, sem tela vazia.`,
+    `${viewport.width}px: ${result.samples} amostras; ${result.min}–${result.max} itens; ${result.frames} quadros do cenário; curvas, pulsos, partículas, cursor e movimento reduzido verificados.`,
   );
   await page.close();
 }
-
 try {
   await Promise.all([
     verify({ width: 1440, height: 900 }),

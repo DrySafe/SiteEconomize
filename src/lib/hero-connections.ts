@@ -1,492 +1,363 @@
-type Point = { x: number; y: number; phase: number };
-type Edge = { a: number; b: number; phase: number };
+type Point = { x: number; y: number };
+type Mote = {
+  angle: number;
+  radius: number;
+  depth: number;
+  speed: number;
+  phase: number;
+};
+type Spark = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  born: number;
+  life: number;
+};
 const namespace = "http://www.w3.org/2000/svg";
 
-function honeycomb() {
-  const points: Point[] = [];
-  const edges: Edge[] = [];
-  const nodes = new Map<string, number>();
-  const links = new Set<string>();
-  const radius = 36;
-  for (
-    let column = -1;
-    column <= Math.ceil(600 / (radius * 1.5)) + 1;
-    column++
-  ) {
-    for (
-      let row = -1;
-      row <= Math.ceil(600 / (Math.sqrt(3) * radius)) + 1;
-      row++
-    ) {
-      const x = column * radius * 1.5;
-      const y =
-        Math.sqrt(3) * radius * (row + (Math.abs(column % 2) ? 0.5 : 0));
-      const corners = Array.from({ length: 6 }, (_, corner) => {
-        const angle = (corner * Math.PI) / 3;
-        const px = x + Math.cos(angle) * radius;
-        const py = y + Math.sin(angle) * radius;
-        const key = `${px.toFixed(3)},${py.toFixed(3)}`;
-        if (!nodes.has(key)) {
-          nodes.set(key, points.length);
-          points.push({ x: px, y: py, phase: Math.random() * Math.PI * 2 });
-        }
-        return nodes.get(key)!;
-      });
-      corners.forEach((a, corner) => {
-        const b = corners[(corner + 1) % 6];
-        const midpoint = {
-          x: (points[a].x + points[b].x) / 2,
-          y: (points[a].y + points[b].y) / 2,
-        };
-        const key = [a, b].sort((first, second) => first - second).join(":");
-        if (
-          links.has(key) ||
-          midpoint.x < 0 ||
-          midpoint.x > 600 ||
-          midpoint.y < 80 ||
-          midpoint.y > 535
-        )
-          return;
-        links.add(key);
-        edges.push({ a, b, phase: Math.random() * Math.PI * 2 });
-      });
-    }
-  }
-  return { points, edges };
-}
-
-function curve(a: Point, b: Point, time: number, phase: number) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const bend = Math.sin(time * 0.32 + phase) * 6;
-  const nx = (-dy / length) * bend;
-  const ny = (dx / length) * bend;
-  return `M${a.x.toFixed(2)},${a.y.toFixed(2)} C${(a.x + dx / 3 + nx).toFixed(2)},${(a.y + dy / 3 + ny).toFixed(2)} ${(a.x + (dx * 2) / 3 + nx).toFixed(2)},${(a.y + (dy * 2) / 3 + ny).toFixed(2)} ${b.x.toFixed(2)},${b.y.toFixed(2)}`;
-}
-
-function roundedRoute(points: Point[]) {
-  if (points.length < 2) return "";
-  let d = `M${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
-  for (let index = 1; index < points.length - 1; index++) {
-    const previous = points[index - 1];
-    const point = points[index];
-    const next = points[index + 1];
-    const before = Math.hypot(point.x - previous.x, point.y - previous.y) || 1;
-    const after = Math.hypot(next.x - point.x, next.y - point.y) || 1;
-    const radius = Math.min(15, before * 0.4, after * 0.4);
-    const ax = point.x + ((previous.x - point.x) / before) * radius;
-    const ay = point.y + ((previous.y - point.y) / before) * radius;
-    const bx = point.x + ((next.x - point.x) / after) * radius;
-    const by = point.y + ((next.y - point.y) / after) * radius;
-    d += ` L${ax.toFixed(2)},${ay.toFixed(2)} Q${point.x.toFixed(2)},${point.y.toFixed(2)} ${bx.toFixed(2)},${by.toFixed(2)}`;
-  }
-  const end = points[points.length - 1];
-  return `${d} L${end.x.toFixed(2)},${end.y.toFixed(2)}`;
-}
-
-function intersectsBox(
-  a: Point,
-  b: Point,
-  box: { x: number; y: number; width: number; height: number },
-) {
-  const dx = b.x - a.x,
-    dy = b.y - a.y;
-  const padding = 12;
-  const p = [-dx, dx, -dy, dy];
-  const q = [
-    a.x - box.x + padding,
-    box.x + box.width + padding - a.x,
-    a.y - box.y + box.height / 2 + padding,
-    box.y + box.height / 2 + padding - a.y,
-  ];
-  let near = 0,
-    far = 1;
-  for (let index = 0; index < 4; index++) {
-    if (p[index] === 0) {
-      if (q[index] < 0) return false;
-    } else {
-      const ratio = q[index] / p[index];
-      if (p[index] < 0) near = Math.max(near, ratio);
-      else far = Math.min(far, ratio);
-      if (near > far) return false;
-    }
-  }
-  return true;
-}
-
+/** A lightweight, layered particle field with brand-to-company signal paths. */
 export function animateHeroConnections(
   svg: SVGSVGElement,
   container: HTMLElement,
 ) {
-  const { points, edges } = honeycomb();
+  const stage = container.parentElement!;
   const labels = Array.from(
     container.querySelectorAll<HTMLElement>(".visual-tag"),
   );
+  const logo = stage.querySelector<HTMLImageElement>(".hero-symbol img");
   const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const adjacency = points.map(() => [] as { node: number; edge: number }[]);
-  edges.forEach(({ a, b }, edge) => {
-    adjacency[a].push({ node: b, edge });
-    adjacency[b].push({ node: a, edge });
+  const canvas = document.createElement("canvas");
+  canvas.className = "hero-flow-field";
+  canvas.setAttribute("aria-hidden", "true");
+  stage.insertBefore(canvas, container);
+  const context = canvas.getContext("2d");
+  if (!context) {
+    canvas.remove();
+    return () => {};
+  }
+  const ctx = context;
+  // Cache the soft light once; avoid repeated blur filters for every mote.
+  const glow = document.createElement("canvas");
+  glow.width = 32;
+  glow.height = 32;
+  const glowContext = glow.getContext("2d")!;
+  const light = glowContext.createRadialGradient(16, 16, 0, 16, 16, 16);
+  light.addColorStop(0, "#ffdda899");
+  light.addColorStop(0.2, "#ffbe6240");
+  light.addColorStop(1, "#ffbe6200");
+  glowContext.fillStyle = light;
+  glowContext.fillRect(0, 0, 32, 32);
+  const id = `hero-signal-${Math.random().toString(36).slice(2)}`;
+  function element<K extends keyof SVGElementTagNameMap>(
+    tag: K,
+    className: string,
+    parent: SVGElement = svg,
+  ) {
+    const node = document.createElementNS(namespace, tag);
+    node.setAttribute("class", className);
+    parent.appendChild(node);
+    return node;
+  }
+  const defs = element("defs", "connection-definitions");
+  const gradient = element("linearGradient", "", defs);
+  gradient.id = id;
+  gradient.setAttribute("x1", "0%");
+  gradient.setAttribute("x2", "100%");
+  [
+    ["0%", "#ffc16e"],
+    ["50%", "#ffe2ae"],
+    ["100%", "#fff6e8"],
+  ].forEach(([offset, color]) => {
+    const stop = element("stop", "", gradient);
+    stop.setAttribute("offset", offset);
+    stop.setAttribute("stop-color", color);
   });
-  function group(className: string) {
-    const element = document.createElementNS(namespace, "g");
-    element.setAttribute("class", className);
-    svg.appendChild(element);
-    return element;
-  }
-  const mesh = group("connection-background");
-  const network = group("connection-network");
-  const dust = group("connection-dust");
-  function path(className: string, parent: SVGGElement) {
-    const element = document.createElementNS(namespace, "path");
-    element.setAttribute("class", className);
-    element.setAttribute("vector-effect", "non-scaling-stroke");
-    parent.appendChild(element);
-    return element;
-  }
-  function dot() {
-    const element = document.createElementNS(namespace, "circle");
-    element.setAttribute("class", "connection-particle");
-    dust.appendChild(element);
-    return element;
-  }
-  const base = edges.map(() => path("connection-mesh", mesh));
-  const attachments = labels.map(() => ({
-    node: -1,
-    position: "",
-    alpha: 0,
-    trend: "",
-  }));
-  const pairs = labels.flatMap((_, a) =>
-    labels.slice(a + 1).map((_, offset) => {
-      const b = a + offset + 1;
-      const paths = [
-        path("connection-active", network),
-        path("connection-active", network),
-      ];
-      paths.forEach((element) => {
-        element.dataset.from = String(a);
-        element.dataset.to = String(b);
-      });
-      const pulses = [dot(), dot()];
-      return {
-        a,
-        b,
-        paths,
-        pulses,
-        nodes: [] as number[],
-        previous: [] as number[],
-        key: "",
-        changed: 0,
-      };
+  const network = element("g", "connection-network");
+  const signals = labels.map((_, index) => {
+    const path = element("path", "connection-active", network);
+    path.setAttribute("stroke", `url(#${id})`);
+    path.setAttribute("vector-effect", "non-scaling-stroke");
+    path.dataset.from = "core";
+    path.dataset.to = String(index);
+    const pulses = Array.from({ length: 6 }, () =>
+      element("circle", "connection-particle", network),
+    );
+    const port = element("circle", "connection-port", network);
+    return {
+      path,
+      pulses,
+      port,
+      alpha: 0,
+      trend: "",
+      phase: Math.random() * Math.PI * 2,
+      bend: 0,
+      nextBend: 0,
+      target: 0,
+    };
+  });
+  const core = element("circle", "connection-core", network);
+  const motes: Mote[] = Array.from(
+    { length: container.clientWidth < 430 ? 62 : 90 },
+    () => ({
+      angle: Math.random() * Math.PI * 2,
+      radius: 155 + Math.random() * 235,
+      depth: 0.35 + Math.random() * 0.65,
+      speed: (0.012 + Math.random() * 0.025) * (Math.random() > 0.5 ? 1 : -1),
+      phase: Math.random() * Math.PI * 2,
     }),
   );
-  const particles: {
-    element: SVGCircleElement;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    born: number;
-    life: number;
-    size: number;
-  }[] = [];
-  const cachedRoutes = new Map<string, number[]>();
-  let costs = edges.map(() => 1);
-  let version = 0;
-  let blocked = edges.map(() => false);
-  let layout = "";
-  let frame = 0;
-  let last = 0;
-  let rerouteAt = 0;
-  let inViewport = false;
-  let disposed = false;
+  const sparks: Spark[] = [];
+  const mouse = { x: 300, y: 300, tx: 300, ty: 300, active: false };
+  let frame = 0,
+    last = 0,
+    count = 0;
+  let visible = false,
+    disposed = false;
 
-  function route(from: number, to: number) {
-    const key = `${from}:${to}`;
-    if (cachedRoutes.has(key)) return cachedRoutes.get(key)!;
-    const distance = points.map(() => Infinity);
-    const previous = new Map<number, number>();
-    const visited = new Set<number>();
-    distance[from] = 0;
-    while (visited.size < points.length) {
-      let current = -1;
-      for (let index = 0; index < points.length; index++) {
-        if (
-          !visited.has(index) &&
-          (current < 0 || distance[index] < distance[current])
-        )
-          current = index;
-      }
-      if (current < 0 || !Number.isFinite(distance[current]) || current === to)
-        break;
-      visited.add(current);
-      for (const neighbor of adjacency[current]) {
-        if (blocked[neighbor.edge]) continue;
-        const point = points[neighbor.node];
-        if (point.x < 5 || point.x > 595 || point.y < 85 || point.y > 535)
-          continue;
-        const next = distance[current] + costs[neighbor.edge];
-        if (next < distance[neighbor.node]) {
-          distance[neighbor.node] = next;
-          previous.set(neighbor.node, current);
-        }
-      }
-    }
-    const result = [to];
-    let current = to;
-    while (current !== from && previous.has(current)) {
-      current = previous.get(current)!;
-      result.unshift(current);
-    }
-    const valid = current === from ? result : [];
-    cachedRoutes.set(key, valid);
-    return valid;
+  function resize() {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(stage.clientWidth * ratio);
+    canvas.height = Math.round(stage.clientHeight * ratio);
+    restart();
   }
-
-  function burst(x: number, y: number, now: number, disconnecting: boolean) {
+  function pointer(event: PointerEvent) {
+    if (event.pointerType === "touch") return;
+    const bounds = stage.getBoundingClientRect();
+    mouse.tx = ((event.clientX - bounds.left) / bounds.width) * 600;
+    mouse.ty = ((event.clientY - bounds.top) / bounds.height) * 600;
+    mouse.active = true;
+  }
+  function leave() {
+    mouse.tx = 300;
+    mouse.ty = 300;
+    mouse.active = false;
+  }
+  function burst(point: Point, now: number, outward: boolean) {
     if (preference.matches) return;
-    for (let index = 0; index < 9 && particles.length < 72; index++) {
+    for (let index = 0; index < 12 && sparks.length < 64; index++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 10 + Math.random() * 25;
-      particles.push({
-        element: dot(),
-        x,
-        y,
-        vx: Math.cos(angle) * speed - (disconnecting ? 12 : 4),
+      const speed = 13 + Math.random() * 30;
+      sparks.push({
+        ...point,
+        vx: Math.cos(angle) * speed - (outward ? 18 : 7),
         vy: Math.sin(angle) * speed,
         born: now,
-        life: 650 + Math.random() * 800,
-        size: 0.9 + Math.random() * 1.2,
+        life: 650 + Math.random() * 950,
       });
     }
   }
-
   function draw(now: number) {
-    if (disposed || !inViewport) return;
-    if (!preference.matches && now - last < 32) {
-      frame = requestAnimationFrame(draw);
-      return;
-    }
+    if (!visible || disposed) return;
+    const delta = Math.min(0.05, (now - last) / 1000 || 0.016);
     last = now;
-    const time = preference.matches ? 0 : now / 1000;
-    const wave = points.map((point) => ({
-      ...point,
-      x:
-        point.x +
-        Math.sin(time * 0.21 + point.y * 0.008) * 5 +
-        Math.sin(time * 0.13 + point.phase) * 1.5,
-      y: point.y + Math.sin(time * 0.18 + point.x * 0.007) * 6,
-    }));
+    const reduced = preference.matches;
+    const time = reduced ? 0 : now / 1000;
+    mouse.x += (mouse.tx - mouse.x) * (reduced ? 1 : 1 - Math.exp(-delta * 4));
+    mouse.y += (mouse.ty - mouse.y) * (reduced ? 1 : 1 - Math.exp(-delta * 4));
+    const px = reduced ? 0 : (mouse.x - 300) / 300;
+    const py = reduced ? 0 : (mouse.y - 300) / 300;
+    stage.style.setProperty("--hero-tilt-x", `${-py * 5}deg`);
+    stage.style.setProperty("--hero-tilt-y", `${px * 7}deg`);
+    ctx.setTransform(canvas.width / 600, 0, 0, canvas.height / 600, 0, 0);
+    ctx.clearRect(0, 0, 600, 600);
+    const field = motes.map((mote) => {
+      const angle = mote.angle + time * mote.speed;
+      const depth = mote.depth;
+      let x =
+        300 +
+        Math.cos(angle) * mote.radius +
+        Math.sin(time * 0.47 + mote.phase) * 15 +
+        px * depth * 18;
+      let y =
+        310 +
+        Math.sin(angle) * mote.radius * 0.78 +
+        Math.cos(time * 0.39 + mote.phase) * 13 +
+        py * depth * 18;
+      const distance = Math.hypot(x - mouse.x, y - mouse.y);
+      if (mouse.active && !reduced && distance < 100) {
+        const force = ((100 - distance) / 100) * 0.23;
+        x += (x - mouse.x) * force;
+        y += (y - mouse.y) * force;
+      }
+      return { x, y, depth };
+    });
+    field.forEach((point, index) => {
+      ctx.shadowBlur = 0;
+      const neighbors = field
+        .slice(index + 1)
+        .map((other) => ({
+          other,
+          distance: Math.hypot(point.x - other.x, point.y - other.y),
+        }))
+        .filter((item) => item.distance < 92)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 3);
+      neighbors.forEach(({ other, distance }) => {
+        ctx.strokeStyle = `rgba(219,181,131,${(1 - distance / 92) * 0.25 * point.depth})`;
+        ctx.lineWidth = 0.65;
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+        ctx.lineTo(other.x, other.y);
+        ctx.stroke();
+      });
+      ctx.fillStyle = `rgba(255,218,159,${0.18 + point.depth * 0.4})`;
+      if (point.depth > 0.75)
+        ctx.drawImage(glow, point.x - 8, point.y - 8, 16, 16);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 0.6 + point.depth * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
     const bounds = container.getBoundingClientRect();
-    if (!bounds.width || !bounds.height) return;
+    const image = logo?.getBoundingClientRect();
+    const origin = image
+      ? {
+          x:
+            ((image.left + image.width * 0.2 - bounds.left) / bounds.width) *
+            600,
+          y:
+            ((image.top + image.height * 0.56 - bounds.top) / bounds.height) *
+            600,
+        }
+      : { x: 215, y: 320 };
+    core.setAttribute("cx", String(origin.x));
+    core.setAttribute("cy", String(origin.y));
+    core.setAttribute("r", "3.5");
     const boxes = labels.map((label) => {
       const rect = label.getBoundingClientRect();
       return {
         x: ((rect.left - bounds.left) / bounds.width) * 600,
         y: ((rect.top + rect.height / 2 - bounds.top) / bounds.height) * 600,
-        width: (rect.width / bounds.width) * 600,
-        height: (rect.height / bounds.height) * 600,
         alpha: Number(getComputedStyle(label).opacity),
-        phase: 0,
       };
     });
-    const obstacles = boxes.filter((box) => box.alpha > 0.04);
-    const nextLayout =
-      boxes
-        .map((box, index) =>
-          box.alpha > 0.04
-            ? `${index}:${labels[index].style.left}:${labels[index].style.top}`
-            : "",
-        )
-        .join("|") + `/${bounds.width}/${bounds.height}`;
-    if (nextLayout !== layout) {
-      layout = nextLayout;
-      blocked = edges.map((edge) =>
-        obstacles.some((box) =>
-          intersectsBox(points[edge.a], points[edge.b], box),
-        ),
-      );
-      cachedRoutes.clear();
-      version++;
-    }
-    function nearest(x: number, y: number) {
-      let result = -1,
-        distance = Infinity;
-      wave.forEach((point, index) => {
-        if (
-          !adjacency[index].length ||
-          points[index].x < 5 ||
-          points[index].x > 595 ||
-          points[index].y < 85 ||
-          points[index].y > 535
-        )
-          return;
-        if (adjacency[index].every((neighbor) => blocked[neighbor.edge]))
-          return;
-        const next =
-          Math.hypot(point.x - x, point.y - y) + Math.max(0, point.x - x) * 2;
-        if (next < distance) {
-          result = index;
-          distance = next;
-        }
-      });
-      return Math.max(0, result);
-    }
-    if (now >= rerouteAt) {
-      costs = edges.map(() => 0.7 + Math.random() * 1.3);
-      cachedRoutes.clear();
-      version++;
-      rerouteAt = now + 5500 + Math.random() * 6500;
-    }
-    boxes.forEach((box, index) => {
-      const attachment = attachments[index];
-      const position = `${labels[index].style.left}/${labels[index].style.top}/${layout}`;
-      if (box.alpha <= 0.001) attachment.node = -1;
-      else if (attachment.node < 0 || attachment.position !== position) {
-        attachment.node = nearest(Math.max(8, box.x - 22), box.y);
-        attachment.position = position;
-      }
+    signals.forEach((signal, index) => {
+      const box = boxes[index];
       if (
-        box.alpha > attachment.alpha + 0.002 &&
-        attachment.trend !== "in" &&
+        box.alpha > signal.alpha + 0.002 &&
+        signal.trend !== "in" &&
         box.alpha > 0.06
       ) {
-        burst(box.x, box.y, now, false);
-        attachment.trend = "in";
+        burst(box, now, false);
+        signal.trend = "in";
       }
       if (
-        box.alpha < attachment.alpha - 0.002 &&
-        attachment.trend !== "out" &&
-        box.alpha < 0.9
+        box.alpha < signal.alpha - 0.002 &&
+        signal.trend !== "out" &&
+        box.alpha < 0.85
       ) {
-        burst(box.x, box.y, now, true);
-        attachment.trend = "out";
+        burst(box, now, true);
+        signal.trend = "out";
       }
-      attachment.alpha = box.alpha;
-    });
-    base.forEach((element, index) => {
-      const edge = edges[index];
-      element.setAttribute(
-        "d",
-        curve(wave[edge.a], wave[edge.b], time, edge.phase),
-      );
-    });
-    pairs.forEach((pair, pairIndex) => {
-      const a = boxes[pair.a],
-        b = boxes[pair.b];
-      const alpha = Math.min(a.alpha, b.alpha);
-      const connected =
-        alpha > 0.04 &&
-        attachments[pair.a].node >= 0 &&
-        attachments[pair.b].node >= 0;
-      if (!connected) {
-        pair.paths.forEach((element) => element.setAttribute("opacity", "0"));
-        pair.pulses.forEach((element) => element.setAttribute("opacity", "0"));
-        pair.key = "";
-        pair.nodes = [];
-        pair.previous = [];
+      signal.alpha = box.alpha;
+      if (box.alpha <= 0.04) {
+        signal.path.setAttribute("opacity", "0");
+        signal.port.setAttribute("opacity", "0");
+        signal.pulses.forEach((pulse) => pulse.setAttribute("opacity", "0"));
         return;
       }
-      const key = `${attachments[pair.a].node}:${attachments[pair.b].node}:${version}`;
-      if (key !== pair.key) {
-        pair.previous = pair.nodes;
-        pair.nodes = route(attachments[pair.a].node, attachments[pair.b].node);
-        pair.key = key;
-        pair.changed = now;
+      if (now >= signal.nextBend) {
+        signal.target = (Math.random() - 0.5) * 60;
+        signal.nextBend = now + 4000 + Math.random() * 7000;
       }
-      const blend = preference.matches
-        ? 1
-        : Math.min(1, (now - pair.changed) / 950);
-      const opacity = Math.pow(alpha, 2) * 0.85;
-      function geometry(nodes: number[]) {
-        if (!nodes.length) return "";
-        return roundedRoute([
-          a,
-          { ...a, x: Math.max(3, a.x - 22) },
-          ...nodes.map((node) => wave[node]),
-          { ...b, x: Math.max(3, b.x - 22) },
-          b,
-        ]);
-      }
-      pair.paths[0].setAttribute("d", geometry(pair.nodes));
-      pair.paths[0].setAttribute(
-        "opacity",
-        (opacity * (pair.previous.length ? blend : 1)).toFixed(4),
-      );
-      pair.paths[1].setAttribute("d", geometry(pair.previous));
-      pair.paths[1].setAttribute(
-        "opacity",
-        (pair.previous.length ? opacity * (1 - blend) : 0).toFixed(4),
-      );
-      pair.pulses.forEach((element, index) => {
-        if (preference.matches || !pair.nodes.length) {
-          element.setAttribute("opacity", "0");
+      signal.bend +=
+        (signal.target - signal.bend) *
+        (reduced ? 1 : 1 - Math.exp(-delta * 0.6));
+      const breath = reduced ? 0 : Math.sin(time * 0.85 + signal.phase) * 18;
+      const control1 = {
+        x: origin.x - 75 - Math.cos(time * 0.4 + signal.phase) * 14,
+        y: origin.y + signal.bend + breath,
+      };
+      const control2 = {
+        x: Math.max(6, box.x - 68),
+        y: box.y - signal.bend * 0.4 + breath * 0.55,
+      };
+      const d = `M${origin.x.toFixed(2)},${origin.y.toFixed(2)} C${control1.x.toFixed(2)},${control1.y.toFixed(2)} ${control2.x.toFixed(2)},${control2.y.toFixed(2)} ${box.x.toFixed(2)},${box.y.toFixed(2)}`;
+      const alpha = Math.pow(box.alpha, 2);
+      signal.path.setAttribute("d", d);
+      signal.path.setAttribute("opacity", (alpha * 0.62).toFixed(4));
+      signal.port.setAttribute("cx", String(box.x));
+      signal.port.setAttribute("cy", String(box.y));
+      signal.port.setAttribute("r", "2.4");
+      signal.port.setAttribute("opacity", String(alpha));
+      const length = signal.path.getTotalLength();
+      const progress = (time * (0.16 + index * 0.013) + signal.phase) % 1;
+      signal.pulses.forEach((pulse, tail) => {
+        const at = progress - tail * 0.025;
+        if (reduced || at <= 0 || at >= 1 || !length) {
+          pulse.setAttribute("opacity", "0");
           return;
         }
-        const length = pair.paths[0].getTotalLength();
-        if (!length) {
-          element.setAttribute("opacity", "0");
-          return;
-        }
-        const progress = (time * 0.09 + pairIndex * 0.23 + index * 0.5) % 1;
-        const point = pair.paths[0].getPointAtLength(length * progress);
-        element.setAttribute("cx", String(point.x));
-        element.setAttribute("cy", String(point.y));
-        element.setAttribute("r", "1.6");
-        element.setAttribute(
+        const point = signal.path.getPointAtLength(length * at);
+        pulse.setAttribute("cx", String(point.x));
+        pulse.setAttribute("cy", String(point.y));
+        pulse.setAttribute("r", String(tail === 0 ? 2.1 : 1.25));
+        pulse.setAttribute(
           "opacity",
-          (opacity * Math.sin(progress * Math.PI) * 0.9).toFixed(3),
+          String(alpha * (1 - tail / 6) * Math.sin(at * Math.PI)),
         );
       });
     });
-    for (let index = particles.length - 1; index >= 0; index--) {
-      const particle = particles[index];
-      const age = now - particle.born;
-      if (age >= particle.life || preference.matches) {
-        particle.element.remove();
-        particles.splice(index, 1);
+    for (let index = sparks.length - 1; index >= 0; index--) {
+      const spark = sparks[index];
+      const age = now - spark.born;
+      if (age >= spark.life || reduced) {
+        sparks.splice(index, 1);
         continue;
       }
       const elapsed = age / 1000;
-      particle.element.setAttribute(
-        "cx",
-        String(particle.x + particle.vx * elapsed),
+      const alpha = Math.pow(1 - age / spark.life, 2);
+      ctx.fillStyle = `rgba(255,228,183,${alpha * 0.85})`;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(
+        glow,
+        spark.x + spark.vx * elapsed - 6,
+        spark.y + spark.vy * elapsed - 6,
+        12,
+        12,
       );
-      particle.element.setAttribute(
-        "cy",
-        String(particle.y + particle.vy * elapsed + elapsed * elapsed * 6),
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(
+        spark.x + spark.vx * elapsed,
+        spark.y + spark.vy * elapsed,
+        1.4 * alpha + 0.3,
+        0,
+        Math.PI * 2,
       );
-      particle.element.setAttribute(
-        "r",
-        String(particle.size * (1 - (age / particle.life) * 0.5)),
-      );
-      particle.element.setAttribute(
-        "opacity",
-        String(Math.pow(1 - age / particle.life, 2) * 0.65),
-      );
+      ctx.fill();
     }
-    if (!preference.matches) frame = requestAnimationFrame(draw);
+    canvas.dataset.frame = String(++count);
+    canvas.dataset.sparks = String(sparks.length);
+    if (!reduced) frame = requestAnimationFrame(draw);
   }
   function restart() {
     cancelAnimationFrame(frame);
-    if (inViewport && !disposed) frame = requestAnimationFrame(draw);
+    if (visible && !disposed) frame = requestAnimationFrame(draw);
   }
   const observer = new IntersectionObserver(([entry]) => {
-    inViewport = entry.isIntersecting;
+    visible = entry.isIntersecting;
     restart();
   });
-  const resize = new ResizeObserver(restart);
+  const size = new ResizeObserver(resize);
   observer.observe(container);
-  resize.observe(container);
+  size.observe(stage);
+  stage.addEventListener("pointermove", pointer);
+  stage.addEventListener("pointerleave", leave);
   preference.addEventListener("change", restart);
+  resize();
   return () => {
     disposed = true;
     cancelAnimationFrame(frame);
     observer.disconnect();
-    resize.disconnect();
+    size.disconnect();
+    stage.removeEventListener("pointermove", pointer);
+    stage.removeEventListener("pointerleave", leave);
     preference.removeEventListener("change", restart);
+    stage.style.removeProperty("--hero-tilt-x");
+    stage.style.removeProperty("--hero-tilt-y");
+    canvas.remove();
     svg.replaceChildren();
   };
 }
