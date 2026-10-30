@@ -4,21 +4,27 @@ Site institucional e blog de cursos e eventos, com painel administrativo. Next.j
 
 ## Vercel + Supabase
 
+Guia de configuração do novo projeto: [Configurar Supabase e variáveis de ambiente](docs/configuracao-supabase.md).
+
+Use `npm run env:setup` para criar `.env.local` sem sobrescrever um arquivo existente e `npm run env:check` para conferir os campos obrigatórios, sem exibir credenciais. A checagem de formato não confirma conectividade.
+
+O painel atual ainda usa um administrador por variáveis de ambiente. Usuários individuais com Supabase Auth, perfis e aprovação de conteúdos estão definidos para a evolução do sistema e não são ativados apenas pelas novas chaves.
+
 O projeto usa **Supabase Postgres** para eventos e sessões, e **Supabase Storage** para capas. Não depende de disco local e é compatível com as funções da Vercel. Requer Node.js 24.x.
 
 ### 1. Preparar o banco
 
-No projeto `xqytfpihewumqtovnqyb`, abra o SQL Editor e execute todo o conteúdo de `supabase/migrations/20261001210502_grupo_e_supabase.sql`. A migração cria tabelas com prefixo `grupo_e_`, regras RLS, um bucket privado `grupo-e-eventos` e os cinco cursos históricos. Ela não apaga tabelas de outros sistemas e pode ser repetida sem sobrescrever os conteúdos importados ou editados.
+No projeto `rjcovpfddmwwetqlrnas`, abra o SQL Editor e execute todo o conteúdo de `supabase/migrations/20261001210502_grupo_e_supabase.sql`. A migração cria tabelas com prefixo `grupo_e_`, regras RLS, um bucket privado `grupo-e-eventos` e os cinco cursos históricos. Ela não apaga tabelas de outros sistemas e pode ser repetida sem sobrescrever os conteúdos importados ou editados.
 
-Com Supabase CLI autenticado, a alternativa é `supabase link --project-ref xqytfpihewumqtovnqyb` seguido de `supabase db push`. Não use as duas alternativas no mesmo fluxo sem reconciliar o histórico de migração.
+Com Supabase CLI autenticado, a alternativa é `supabase link --project-ref rjcovpfddmwwetqlrnas` seguido de `supabase db push`. Não use as duas alternativas no mesmo fluxo sem reconciliar o histórico de migração.
 
 ### 2. Configurar a Vercel
 
-Em **Settings → Environment Variables**, adicione para **Production** e **Preview**:
+Em **Settings → Environment Variables**, adicione para **Production** (use um banco separado para testes em Preview):
 
 | Variável              | Valor                                                  |
 | --------------------- | ------------------------------------------------------ |
-| `SUPABASE_URL`        | `https://xqytfpihewumqtovnqyb.supabase.co`             |
+| `SUPABASE_URL`        | `https://rjcovpfddmwwetqlrnas.supabase.co`             |
 | `SUPABASE_SECRET_KEY` | Chave secreta obtida em Supabase → Settings → API Keys |
 | `ADMIN_EMAIL`         | E-mail escolhido para o administrador do site          |
 | `ADMIN_PASSWORD_HASH` | Hash gerado com `npm run admin:setup`                  |
@@ -46,9 +52,10 @@ São esperados cinco conteúdos iniciais e bucket privado com limite de 3 MB. En
 
 ```sh
 npm ci
-cp .env.example .env.local
+npm run env:setup
 npm run admin:setup
 # Preencha a URL/chave e copie ADMIN_EMAIL/ADMIN_PASSWORD_HASH para .env.local.
+npm run env:check
 npm run dev
 ```
 

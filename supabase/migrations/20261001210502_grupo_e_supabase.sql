@@ -1,4 +1,4 @@
--- Aplicar no projeto xqytfpihewumqtovnqyb. Nenhuma tabela existente é removida.
+-- Aplicar no projeto configurado em SUPABASE_URL. Nenhuma tabela existente é removida.
 create table if not exists public.grupo_e_events (
   id text primary key,
   slug text unique not null,
