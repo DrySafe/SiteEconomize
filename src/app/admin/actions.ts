@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import {
   requireAdmin,
+  administratorLoginConfigured,
+  signInAdministrator,
   createSession,
   destroySession,
   allowLogin,
   resetLoginAttempts,
 } from "@/lib/auth";
-import { verifyPassword } from "@/lib/password";
 import { getEvents, saveEvent, deleteEvent } from "@/lib/db";
-import { databaseConfigured } from "@/lib/supabase";
 import { uploadImage, removeImage } from "@/lib/media";
 import {
   slugify,
@@ -23,14 +23,10 @@ export async function login(
   _state: FormResult,
   form: FormData,
 ): Promise<FormResult> {
-  if (
-    !databaseConfigured() ||
-    !process.env.ADMIN_EMAIL ||
-    !process.env.ADMIN_PASSWORD_HASH
-  )
+  if (!administratorLoginConfigured())
     return {
       error:
-        "O administrador ainda não foi configurado. Siga o guia de configuração do projeto.",
+        "O acesso via Supabase Auth ainda não foi configurado.",
     };
   let allowed: boolean;
   try {
@@ -50,12 +46,11 @@ export async function login(
       .toLowerCase(),
     password = String(form.get("password") || "");
   if (password.length > 512) return { error: "E-mail ou senha incorretos." };
-  const valid = verifyPassword(password, process.env.ADMIN_PASSWORD_HASH);
-  if (!valid || email !== process.env.ADMIN_EMAIL.trim().toLowerCase())
-    return { error: "E-mail ou senha incorretos." };
   try {
+    const userId = await signInAdministrator(email, password);
+    if (!userId) return { error: "E-mail, senha ou autorização administrativa inválidos." };
+    await createSession(userId);
     await resetLoginAttempts();
-    await createSession();
   } catch {
     return {
       error:

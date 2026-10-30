@@ -12,11 +12,10 @@ export function LoginForm({ configured }: { configured: boolean }) {
       </div>
       <span className="eyebrow">ÁREA ADMINISTRATIVA</span>
       <h1>Bom ter você aqui.</h1>
-      <p>Entre para cuidar dos cursos e eventos do GRUPO E.</p>
+      <p>Use seu e-mail e senha cadastrados no Supabase Auth.</p>
       {!configured && (
         <div className="notice">
-          O acesso ainda precisa ser configurado. Consulte o README do projeto
-          para criar suas credenciais.
+          O acesso ainda precisa ser configurado pela equipe responsável.
         </div>
       )}
       <label>
